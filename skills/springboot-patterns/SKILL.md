@@ -1,11 +1,19 @@
 ---
 name: springboot-patterns
-description: Spring Boot 架构模式、REST API 设计、分层服务、数据访问、缓存、异步处理、日志。适配 Java 21 + Spring Boot 3 + MyBatis-Plus + MySQL 技术栈。
+description: Spring Boot 架构模式：REST API、WebFlux 响应式、R2DBC、虚拟线程、分层服务、数据访问、缓存、异步处理。适配 Java 21 + Spring Boot 3.2 技术栈。
+version: 1.1.0
+tech_stack: [Java 21, Spring Boot 3.2, WebFlux, R2DBC, MyBatis-Plus, Virtual Threads]
+tools: Read, Write, Edit, Bash, Grep, Glob
+related_skills: [backend-patterns, java-coding-standards, mysql-patterns, springboot-tdd]
 ---
 
 # Spring Boot 开发模式
 
-Spring Boot 架构和 API 模式，用于构建可扩展、生产级服务。
+Spring Boot 架构和 API 模式，用于构建可扩展、生产级服务。涵盖传统 MVC、响应式 WebFlux、R2DBC 和 Java 21 虚拟线程等现代技术。
+
+> 本技能与 `backend-patterns` 的区别：
+> - `springboot-patterns` - Spring Boot **框架特定模式**（WebFlux、R2DBC、虚拟线程）
+> - `backend-patterns` - 通用后端架构模式（REST 设计、缓存策略、限流、CI/CD）
 
 ## REST API 结构
 
@@ -549,3 +557,502 @@ logging:
 - 使用 MyBatis-Plus 的 LambdaQueryWrapper 避免硬编码字段名
 
 **记住**：保持控制器精简、服务专注、Mapper 简单、错误集中处理。优先考虑可维护性和可测试性。
+
+---
+
+## WebFlux 响应式模式
+
+### 响应式 Controller
+
+```java
+@RestController
+@RequestMapping("/api/markets")
+@RequiredArgsConstructor
+public class MarketController {
+
+    private final MarketService marketService;
+
+    // 返回 Mono（单个元素）
+    @GetMapping("/{id}")
+    public Mono<Result<MarketVO>> getById(@PathVariable Long id) {
+        return marketService.getById(id)
+            .map(MarketVO::from)
+            .map(Result::ok);
+    }
+
+    // 返回 Flux（多个元素）
+    @GetMapping
+    public Mono<Result<Flux<MarketVO>>> list(
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "20") int size
+    ) {
+        return Mono.just(Result.ok(
+            marketService.list(page, size)
+                .map(MarketVO::from)
+        ));
+    }
+
+    // 创建资源
+    @PostMapping
+    public Mono<Result<MarketVO>> create(@Valid @RequestBody CreateMarketDTO request) {
+        return marketService.create(request)
+            .map(MarketVO::from)
+            .map(Result::ok);
+    }
+
+    // 流式响应（Server-Sent Events）
+    @GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public Flux<MarketVO> stream() {
+        return marketService.streamMarkets()
+            .map(MarketVO::from);
+    }
+}
+```
+
+### 响应式 Service
+
+```java
+@Service
+@RequiredArgsConstructor
+public class MarketService {
+
+    private final MarketRepository marketRepository;
+    private final MarketCacheRepository cacheRepository;
+
+    // 响应式查询
+    public Mono<Market> getById(Long id) {
+        return cacheRepository.findById(id)
+            .switchIfEmpty(
+                marketRepository.findById(id)
+                    .flatMap(market -> cacheRepository.save(market).thenReturn(market))
+            )
+            .switchIfEmpty(Mono.error(
+                new BusinessException(ErrorCode.NOT_FOUND, "市场不存在")
+            ));
+    }
+
+    // 响应式列表查询
+    public Flux<Market> list(int page, int size) {
+        return marketRepository.findAll()
+            .skip(page * size)
+            .take(size);
+    }
+
+    // 响应式创建
+    @Transactional
+    public Mono<Market> create(CreateMarketDTO dto) {
+        Market market = Market.builder()
+            .name(dto.getName())
+            .description(dto.getDescription())
+            .status(MarketStatus.ACTIVE)
+            .build();
+
+        return marketRepository.save(market);
+    }
+
+    // 响应式流
+    public Flux<Market> streamMarkets() {
+        return marketRepository.findAll()
+            .delayElements(Duration.ofMillis(100)); // 控制流速
+    }
+
+    // 批量操作
+    public Flux<Market> batchCreate(List<CreateMarketDTO> dtos) {
+        return Flux.fromIterable(dtos)
+            .flatMap(dto -> {
+                Market market = Market.builder()
+                    .name(dto.getName())
+                    .description(dto.getDescription())
+                    .build();
+                return marketRepository.save(market);
+            }, 10); // 并发数为 10
+    }
+}
+```
+
+### R2DBC Repository
+
+```java
+// Repository 接口
+public interface MarketRepository extends ReactiveCrudRepository<Market, Long> {
+
+    // 自定义查询
+    @Query("SELECT * FROM market WHERE status = :status")
+    Flux<Market> findByStatus(@Param("status") MarketStatus status);
+
+    // 响应式分页
+    @Query("SELECT * FROM market LIMIT :limit OFFSET :offset")
+    Flux<Market> findByPage(@Param("offset") int offset, @Param("limit") int limit);
+
+    // 计数查询
+    @Query("SELECT COUNT(*) FROM market WHERE status = :status")
+    Mono<Long> countByStatus(@Param("status") MarketStatus status);
+}
+```
+
+### 响应式缓存
+
+```java
+@Repository
+public class MarketCacheRepository {
+
+    private final ReactiveRedisTemplate<String, Market> redisTemplate;
+    private static final String KEY_PREFIX = "market:";
+
+    public Mono<Market> findById(Long id) {
+        return redisTemplate.opsForValue().get(KEY_PREFIX + id);
+    }
+
+    public Mono<Market> save(Market market) {
+        return redisTemplate.opsForValue()
+            .set(KEY_PREFIX + market.getId(), market, Duration.ofMinutes(30))
+            .thenReturn(market);
+    }
+
+    public Mono<Void> evict(Long id) {
+        return redisTemplate.opsForValue().delete(KEY_PREFIX + id).then();
+    }
+
+    public Flux<Market> saveAll(Flux<Market> markets) {
+        return markets.flatMap(market ->
+            redisTemplate.opsForValue()
+                .set(KEY_PREFIX + market.getId(), market, Duration.ofMinutes(30))
+                .thenReturn(market)
+        );
+    }
+}
+```
+
+### 响应式配置
+
+```yaml
+# application.yml
+spring:
+  r2dbc:
+    url: r2dbc:mysql://localhost:3306/app
+    username: root
+    password: password
+    pool:
+      initial-size: 5
+      max-size: 20
+      max-idle-time: 30m
+      validation-query: SELECT 1
+  data:
+    redis:
+      host: localhost
+      port: 6379
+```
+
+```java
+@Configuration
+public class R2dbcConfig {
+
+    @Bean
+    public ConnectionFactory connectionFactory() {
+        return ConnectionFactories.get(
+            ConnectionFactoryOptions.builder()
+                .option(DRIVER, "mysql")
+                .option(HOST, "localhost")
+                .option(PORT, 3306)
+                .option(USER, "root")
+                .option(PASSWORD, "password")
+                .option(DATABASE, "app")
+                .build()
+        );
+    }
+
+    @Bean
+    public ReactiveRedisTemplate<String, Market> reactiveRedisTemplate(
+        ReactiveRedisConnectionFactory factory
+    ) {
+        StringRedisSerializer keySerializer = new StringRedisSerializer();
+        Jackson2JsonRedisSerializer<Market> valueSerializer =
+            new Jackson2JsonRedisSerializer<>(Market.class);
+
+        RedisSerializationContext<String, Market> context =
+            RedisSerializationContext.<String, Market>newSerializationContext()
+                .key(keySerializer)
+                .value(valueSerializer)
+                .hashKey(keySerializer)
+                .hashValue(valueSerializer)
+                .build();
+
+        return new ReactiveRedisTemplate<>(factory, context);
+    }
+}
+```
+
+### 响应式异常处理
+
+```java
+@Configuration
+public class WebFluxConfig implements WebFluxConfigurer {
+
+    @Bean
+    @Order(-2)
+    public WebExceptionHandler exceptionHandler() {
+        return (ServerWebExchange exchange, Throwable ex) -> {
+            ServerHttpResponse response = exchange.getResponse();
+
+            if (ex instanceof BusinessException) {
+                response.setStatusCode(HttpStatus.BAD_REQUEST);
+                return writeErrorResponse(response, ((BusinessException) ex).getCode(),
+                    ex.getMessage());
+            } else if (ex instanceof ResponseStatusException) {
+                response.setStatusCode(((ResponseStatusException) ex).getStatusCode());
+                return writeErrorResponse(response, ((ResponseStatusException) ex).getStatusCode().value(),
+                    ex.getMessage());
+            } else {
+                response.setStatusCode(HttpStatus.INTERNAL_SERVER_ERROR);
+                return writeErrorResponse(response, 500, "系统错误");
+            }
+        };
+    }
+
+    private Mono<Void> writeErrorResponse(ServerHttpResponse response, int code, String message) {
+        byte[] bytes = String.format("{\"code\":%d,\"message\":\"%s\"}", code, message)
+            .getBytes(StandardCharsets.UTF_8);
+
+        DataBuffer buffer = response.bufferFactory().wrap(bytes);
+        response.getHeaders().setContentType(MediaType.APPLICATION_JSON);
+
+        return response.writeWith(Mono.just(buffer));
+    }
+}
+```
+
+---
+
+## 虚拟线程（Virtual Threads）
+
+Java 21 引入的虚拟线程，适用于高并发 I/O 密集型场景。
+
+### 启用虚拟线程
+
+```yaml
+# application.yml
+spring:
+  threads:
+    virtual:
+      enabled: true
+```
+
+```java
+@Configuration
+public class ThreadConfig {
+
+    @Bean
+    public Executor taskExecutor() {
+        // 使用虚拟线程创建执行器
+        return Executors.newVirtualThreadPerTaskExecutor();
+    }
+
+    @Bean
+    public SpringAsyncTaskExecutor springAsyncTaskExecutor() {
+        return new SpringAsyncTaskExecutor(taskExecutor());
+    }
+}
+```
+
+### 虚拟线程 Controller
+
+```java
+@RestController
+@RequestMapping("/api/products")
+public class ProductController {
+
+    private final ProductService productService;
+
+    // 虚拟线程处理每个请求
+    @GetMapping("/{id}")
+    public Product getProduct(@PathVariable Long id) {
+        // 方法运行在虚拟线程上
+        return productService.getById(id);
+    }
+
+    // 并发请求多个服务
+    @GetMapping("/aggregate/{id}")
+    public ProductAggregate getAggregate(@PathVariable Long id) {
+        // 使用结构化并发并发调用多个服务
+        try (var scope = new StructuredTaskScope.ShutdownOnFailure()) {
+            Supplier<Product> productTask = scope.fork(() -> productService.getProduct(id));
+            Supplier<List<Review>> reviewsTask = scope.fork(() -> productService.getReviews(id));
+            Supplier<ProductStats> statsTask = scope.fork(() -> productService.getStats(id));
+
+            // 等待所有任务完成
+            scope.join();
+
+            return new ProductAggregate(
+                productTask.get(),
+                reviewsTask.get(),
+                statsTask.get()
+            );
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new ServiceException("请求被中断", e);
+        }
+    }
+}
+```
+
+### 虚拟线程异步服务
+
+```java
+@Service
+public class ExternalApiService {
+
+    // 虚拟线程执行器
+    private final ExecutorService virtualExecutor = Executors.newVirtualThreadPerTaskExecutor();
+
+    public CompletableFuture<User> fetchUser(Long userId) {
+        return CompletableFuture.supplyAsync(() -> {
+            // 阻塞调用，但运行在虚拟线程上
+            return restTemplate.getForObject(
+                "https://api.example.com/users/" + userId,
+                User.class
+            );
+        }, virtualExecutor);
+    }
+
+    public CompletableFuture<List<User>> fetchUsers(List<Long> userIds) {
+        // 并发获取多个用户
+        List<CompletableFuture<User>> futures = userIds.stream()
+            .map(id -> CompletableFuture.supplyAsync(() -> {
+                return restTemplate.getForObject(
+                    "https://api.example.com/users/" + id,
+                    User.class
+                );
+            }, virtualExecutor))
+            .toList();
+
+        // 等待所有完成
+        return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
+            .thenApply(v -> futures.stream()
+                .map(CompletableFuture::join)
+                .toList());
+    }
+}
+```
+
+### 结构化并发
+
+```java
+@Service
+public class OrderService {
+
+    public OrderDetail getOrderDetail(Long orderId) {
+        // 使用 try-with-resources 确保任务作用域正确关闭
+        try (var scope = new StructuredTaskScope.ShutdownOnFailure()) {
+
+            // 并发执行多个任务
+            StructuredTaskScope.Subtask<Order> orderTask =
+                scope.fork(() -> orderRepository.findById(orderId));
+
+            StructuredTaskScope.Subtask<User> userTask =
+                scope.fork(() -> userService.getById(orderId));
+
+            StructuredTaskScope.Subtask<List<OrderItem>> itemsTask =
+                scope.fork(() -> orderItemRepository.findByOrderId(orderId));
+
+            // 等待所有任务完成
+            scope.join();
+
+            // 如果有任务失败，抛出异常
+            scope.throwIfFailed();
+
+            // 组合结果
+            return OrderDetail.builder()
+                .order(orderTask.get())
+                .user(userTask.get())
+                .items(itemsTask.get())
+                .build();
+
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new ServiceException("获取订单详情失败", e);
+        } catch (ExecutionException e) {
+            throw new ServiceException("获取订单详情失败", e.getCause());
+        }
+    }
+
+    // 使用 ShutdownOnSuccess 在第一个成功时返回
+    public Product fetchProductFromAnySource(Long productId) {
+        try (var scope = new StructuredTaskScope.ShutdownOnSuccess<Product>()) {
+
+            // 从多个数据源获取，哪个先成功用哪个
+            scope.fork(() -> fetchFromCache(productId));
+            scope.fork(() -> fetchFromDatabase(productId));
+            scope.fork(() -> fetchFromExternalApi(productId));
+
+            scope.join();
+            return scope.result(); // 返回第一个成功的结果
+
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new ServiceException("获取产品失败", e);
+        }
+    }
+}
+```
+
+### 虚拟线程调度任务
+
+```java
+@Component
+public class ScheduledTasks {
+
+    private final ScheduledExecutorService scheduler =
+        Executors.newScheduledThreadPool(1,
+            Thread.ofVirtual().factory());
+
+    @Scheduled(fixedRate = 1000)
+    public void heartbeat() {
+        // 运行在虚拟线程上
+        log.info("心跳检测");
+    }
+
+    public void scheduleTask(Runnable task, long delay) {
+        scheduler.schedule(task, delay, TimeUnit.MILLISECONDS);
+    }
+}
+```
+
+### 虚拟线程监控
+
+```java
+@Component
+public class VirtualThreadMonitor {
+
+    @EventListener(ContextRefreshedEvent.class)
+    public void logVirtualThreadInfo() {
+        ThreadInfo[] threads = ManagementFactory.getThreadMXBean()
+            .dumpAllThreads(false, false);
+
+        long virtualThreadCount = Arrays.stream(threads)
+            .filter(t -> t.isVirtual())
+            .count();
+
+        log.info("当前虚拟线程数: {}", virtualThreadCount);
+
+        // 定期监控
+        ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(
+            Thread.ofVirtual().factory()
+        );
+        scheduler.scheduleAtFixedRate(() -> {
+            long count = ManagementFactory.getThreadMXBean().getThreadCount();
+            long peak = ManagementFactory.getThreadMXBean().getPeakThreadCount();
+            log.debug("当前线程数: {}, 峰值: {}", count, peak);
+        }, 0, 1, TimeUnit.MINUTES);
+    }
+}
+```
+
+---
+
+## 相关技能
+
+- `java-coding-standards` - Java 21 编码规范
+- `java-patterns` - 基于 Alibaba Java 开发手册
+- `backend-patterns` - 后端架构模式
+- `mysql-patterns` - MySQL + MyBatis-Plus 最佳实践
+- `springboot-tdd` - Spring Boot TDD 工作流程

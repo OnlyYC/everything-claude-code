@@ -191,7 +191,7 @@ python3 ~/.claude/skills/continuous-learning-v2/scripts/instinct-cli.py --help
 | `--dry-run` | 预览但不创建 |
 | `--domain <名称>` | 仅聚合指定领域的经验 |
 | `--threshold <n>` | 聚合所需的最少经验数量（默认：3） |
-| `--type <command\|skill\|agent>` | 仅创建指定类型 |
+| `--type <command|skill|agent>` | 仅创建指定类型 |
 
 ## 生成文件格式
 

@@ -116,7 +116,7 @@ python3 ~/.claude/skills/continuous-learning-v2/scripts/instinct-cli.py --help
 ```yaml
 source: "inherited"
 imported_from: "team-instincts.yaml"
-imported_at: "2025-01-22T10:30:00Z"  # 使用实际导入时间戳
+imported_at: "2024-01-15T10:30:00Z"  # 使用实际导入时间戳
 original_source: "session-observation"  # 或 "repo-analysis"
 ```
 
@@ -161,7 +161,7 @@ original_source: "session-observation"  # 或 "repo-analysis"
 |------|------|
 | `--dry-run` | 预览但不实际导入 |
 | `--force` | 即使存在冲突也强制导入 |
-| `--merge-strategy <higher\|local\|import>` | 重复经验处理策略 |
+| `--merge-strategy <higher|local|import>` | 重复经验处理策略 |
 | `--from-skill-creator <所有者/仓库>` | 从技能生成器分析结果导入 |
 | `--min-confidence <值>` | 仅导入高于指定置信度的经验 |
 

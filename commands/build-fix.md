@@ -28,6 +28,12 @@ command: /build-fix [--lang <java|nodejs|python|go|rust] [--dry-run]
 
 ## 修复流程
 
+1. **检测项目类型**：自动识别构建工具和编程语言
+2. **执行构建**：运行对应的构建命令获取错误信息
+3. **分析错误**：按严重性和类型分组
+4. **增量修复**：每次修复一个错误后重新验证
+5. **生成报告**：汇总修复结果和剩余问题
+
 ## 语言检测与构建命令
 
 ### 自动检测
@@ -106,35 +112,6 @@ go test ./...
 cargo build
 cargo test
 cargo clippy
-```
-
-## 常见 Java 编译错误
-
-| 错误 | 典型修复 |
-|------|----------|
-| `cannot find symbol` | 新增 import 或修正类名拼写 |
-| `package X does not exist` | 新增 Maven 依赖或修正包名 |
-| `incompatible types` | 类型转换或修正泛型声明 |
-| `missing return statement` | 新增 return 语句 |
-| `method X in class Y cannot be applied` | 修正方法参数类型或数量 |
-| `cyclic inheritance` | 重构类继承关系 |
-| `IOException, FileNotFoundException` | 新增 throws 声明或 try-catch |
-
-## 构建命令
-
-```bash
-# Maven 构建（跨平台通用）
-mvn clean compile
-mvn clean package
-mvn clean install
-
-# Gradle 构建（跨平台通用）
-gradle build
-gradle compileJava
-gradle bootJar
-
-# 跳过测试构建（跨平台通用）
-mvn clean package -DskipTests
 ```
 
 为了安全，一次修复一个错误！

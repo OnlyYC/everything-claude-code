@@ -58,7 +58,7 @@ python3 ~/.claude/skills/continuous-learning-v2/scripts/instinct-cli.py --help
 触发时机：编写业务逻辑时
 动作：业务逻辑必须通过 Service 层，Controller 不可直接调用 Mapper
 置信度：████████░░ 80%
-来源：session-observation | 最后更新：2025-01-22  # 示例日期
+来源：session-observation | 最后更新：2024-01-15  # 示例日期
 
 ### dto-vo-separation
 触发时机：定义接口参数时

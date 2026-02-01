@@ -1,3 +1,13 @@
+---
+name: project-guidelines-example
+description: 企业级 Java 后端项目指南模板：基于 Java 21 + Spring Boot 3 + MyBatis-Plus + MySQL 技术栈的项目结构和开发规范示例
+version: 1.1.0
+tech_stack: [Java 21, Spring Boot 3, MyBatis-Plus, MySQL, Maven, Docker]
+platforms: [Windows, macOS, Linux, WSL]
+tools: [Read, Write, Edit, Bash, Grep, Glob]
+related_skills: [java-coding-standards, springboot-patterns, springboot-tdd, verification-loop]
+---
+
 # 项目指南技能（示例）
 
 这是项目特定技能的示例。使用此作为你自己项目的模板。
@@ -722,31 +732,11 @@ class UserIntegrationTest {
 ### Controller 测试
 
 ```java
-package com.example.project.controller;
-
-import com.example.project.dto.request.UserCreateRequest;
-import com.example.project.dto.response.UserResponse;
-import com.example.project.service.UserService;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.http.MediaType;
-import org.springframework.test.web.servlet.MockMvc;
-
-import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
-
 @WebMvcTest(UserController.class)
 class UserControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
-
-    @Autowired
-    private ObjectMapper objectMapper;
 
     @MockBean
     private UserService userService;
@@ -754,19 +744,14 @@ class UserControllerTest {
     @Test
     void create_ReturnsSuccess() throws Exception {
         // Given
-        UserCreateRequest request = new UserCreateRequest(
-            "test", "test@example.com"
-        );
-        UserResponse response = new UserResponse(
-            1L, "test", "test@example.com", 1, null
-        );
-
+        UserCreateRequest request = new UserCreateRequest("test", "test@example.com");
+        UserResponse response = new UserResponse(1L, "test", "test@example.com", 1, null);
         when(userService.create(request)).thenReturn(response);
 
         // When & Then
         mockMvc.perform(post("/api/users")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request)))
+                .content(new ObjectMapper().writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.username").value("test"));
@@ -898,6 +883,52 @@ MANAGEMENT_METRICS_EXPORT_PROMETHEUS_ENABLED=true
 
 ---
 
+## 常见问题排查
+
+### 问题1：依赖冲突
+
+**症状**：`mvn clean compile` 报错 "ClassNotFoundException" 或版本冲突
+
+**排查**：
+```bash
+mvn dependency:tree
+mvn enforcer:enforce
+```
+
+**解决**：
+- 在 pom.xml 中显式声明版本
+- 使用 `<exclusions>` 排除冲突依赖
+
+### 问题2：MyBatis Mapper 找不到
+
+**症状**：`Invalid bound statement (not found)`
+
+**排查清单**：
+- [ ] Mapper 接口有 @Mapper 注解
+- [ ] 启动类有 @MapperScan 指定包路径
+- [ ] XML 文件在 resources/mapper 目录下
+- [ ] XML namespace 与接口全限定名一致
+- [ ] application.yml 配置了 mapper-locations
+
+### 问题3：事务不生效
+
+**症状**：异常后数据未回滚
+
+**排查清单**：
+- [ ] 方法在 public 级别
+- [ ] 使用 @Transactional 注解
+- [ ] rollbackFor = Exception.class
+- [ ] 同类内部调用不触发事务（需注入自身代理）
+
+### 问题4：测试覆盖率不足
+
+**症状**：JaCoCo 报告低于 80%
+
+**解决方案**：
+- 补充边界条件测试
+- 添加异常路径测试
+- 对私有逻辑提取为 public 方法进行测试
+
 ## 相关技能
 
 - `java-coding-standards` - Java 编码最佳实践
@@ -905,3 +936,4 @@ MANAGEMENT_METRICS_EXPORT_PROMETHEUS_ENABLED=true
 - `springboot-tdd` - Spring Boot TDD 方法论
 - `java-testing` - Java 测试指南
 - `backend-patterns` - 后端通用模式
+- `verification-loop` - 完整验证流程

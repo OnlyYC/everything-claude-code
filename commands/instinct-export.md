@@ -36,7 +36,7 @@ command: /instinct-export [--domain <名称>] [--min-confidence <值>] [--output
 
 ```yaml
 # 经验导出文件
-# 生成时间：2025-01-22  # 使用实际导出日期
+# 生成时间：2024-01-15  # 使用实际导出日期
 # 来源：personal
 # 数量：12 条经验
 
@@ -131,7 +131,7 @@ instincts:
 
 ```bash
 # 导出所有经验用于交接（使用当前日期）
-/instinct-export --output project-handover-20250122.yaml
+/instinct-export --output project-handover-$(date +%Y%m%d).yaml
 ```
 
 ### 贡献到团队技能库

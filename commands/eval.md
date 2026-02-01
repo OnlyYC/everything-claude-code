@@ -22,7 +22,7 @@ command: /eval [define|check|report|list|clean] [feature-name]
 
 ```markdown
 ## EVAL: feature-name
-建立日期：2025-01-22  # 或使用当前日期
+建立日期：2024-01-15  # 或使用当前日期
 
 ### 能力 Evals
 - [ ] [能力 1 的描述]
@@ -73,7 +73,7 @@ EVAL 检查：feature-name
 ```
 EVAL 报告：feature-name
 =========================
-产生日期：2025-01-22  # 或使用当前日期
+产生日期：2024-01-15  # 或使用当前日期
 
 能力 EVALS
 ----------------

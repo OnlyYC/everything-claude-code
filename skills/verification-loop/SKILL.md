@@ -1,3 +1,12 @@
+---
+name: verification-loop
+description: 完整的 Spring Boot 项目验证系统：构建验证、静态分析、测试覆盖率、安全扫描、代码审查、Docker 验证、性能验证。适配 Java 21 + Spring Boot 3 + MyBatis-Plus + MySQL 技术栈。
+version: 1.1.0
+tech_stack: [Java 21, Spring Boot 3.2, MyBatis-Plus, Docker, Maven]
+tools: Read, Write, Edit, Bash, Grep, Glob
+related_skills: [springboot-verification, springboot-tdd, eval-harness, security-review]
+---
+
 # 验证循环技能
 
 Claude Code 会话的完整验证系统。
@@ -10,6 +19,22 @@ Claude Code 会话的完整验证系统。
 - 想确保质量门槛通过时
 - 重构后
 - 添加新 API 端点或 Service 后
+
+## 与其他技能的职责划分
+
+| 技能 | 职责 |
+|------|------|
+| `verification-loop` | 完整项目验证：构建、静态分析、安全扫描、Docker、性能 |
+| `tdd-workflow` | 通用 TDD 方法论：红-绿-重构、测试设计原则 |
+| `springboot-tdd` | Spring Boot 特定测试：@WebMvcTest、@DataJpaTest、@MockBean |
+| `security-review` | 安全审查：认证授权、输入验证、密钥管理 |
+| `eval-harness` | Eval 驱动开发：能力评估、回归测试 |
+
+**核心区别**：
+- 本技能聚焦 "部署前的全面质量验证"（包括构建、安全、性能、Docker）
+- `tdd-workflow` 聚焦 "开发阶段的测试实践"（红-绿-重构循环）
+- `security-review` 聚焦 "安全最佳实践"（认证、授权、漏洞防护）
+- 使用顺序：`tdd-workflow`（开发） → `security-review`（安全检查） → `verification-loop`（全面验证）
 
 ## 验证阶段
 
@@ -418,4 +443,612 @@ mvn test && mvn checkstyle:check
 # .git/hooks/pre-push
 
 mvn clean test jacoco:check
+```
+
+---
+
+## 阶段 8：Docker 验证
+
+### Dockerfile 检查
+
+```bash
+# 检查 Dockerfile 语法
+docker build --check -f Dockerfile .
+
+# 分析 Dockerfile 最佳实践
+hadolint Dockerfile
+```
+
+### Docker 镜像构建验证
+
+```bash
+# 构建镜像
+docker build -t myapp:latest .
+
+# 检查镜像大小
+docker images myapp:latest
+
+# 验证镜像可以启动
+docker run --rm myapp:latest java -version
+
+# 检查镜像层
+docker history myapp:latest
+```
+
+### Docker 容器运行验证
+
+```bash
+# 启动容器
+docker run -d --name test-container -p 8080:8080 myapp:latest
+
+# 等待应用启动
+sleep 10
+
+# 健康检查
+curl -f http://localhost:8080/actuator/health
+
+# 执行应用自检
+docker exec test-container curl -f http://localhost:8080/actuator/health
+
+# 检查日志
+docker logs test-container
+
+# 清理
+docker stop test-container
+docker rm test-container
+```
+
+### Docker Compose 验证
+
+```bash
+# 启动完整环境
+docker-compose -f docker-compose.yml -f docker-compose.test.yml up -d
+
+# 等待服务就绪
+docker-compose logs -f app
+
+# 执行健康检查
+curl http://localhost:8080/actuator/health
+
+# 执行集成测试
+docker-compose exec app mvn test
+
+# 清理
+docker-compose down -v
+```
+
+### Docker 安全扫描
+
+```bash
+# 使用 Trivy 扫描镜像漏洞
+trivy image myapp:latest
+
+# 使用 Snyk 扫描
+snyk container test myapp:latest
+
+# 检查镜像基础镜像
+docker inspect myapp:latest | grep -A 10 "Layers"
+```
+
+---
+
+## 阶段 9：性能验证
+
+### 应用启动性能
+
+```bash
+# 测量应用启动时间
+time java -jar target/app.jar
+
+# 使用 Spring Boot Actuator
+curl http://localhost:8080/actuator/metrics/jvm.memory.used
+curl http://localhost:8080/actuator/metrics/process.uptime
+```
+
+### 内存使用分析
+
+```bash
+# 启动应用并监控内存
+java -Xmx512m -Xms256m -jar target/app.jar &
+PID=$!
+
+# 等待应用启动
+sleep 10
+
+# 检查内存使用
+jps -l | grep app
+jmap -heap $PID
+
+# 使用 VisualVM 连接分析
+jvisualvm --openpid $PID
+
+# 清理
+kill $PID
+```
+
+### API 性能测试
+
+```bash
+# 使用 Apache Bench 进行简单压测
+ab -n 1000 -c 10 http://localhost:8080/api/users
+
+# 使用 wrk（更高级）
+wrk -t4 -c100 -d30s http://localhost:8080/api/users
+
+# 使用 curl 测试响应时间
+time curl http://localhost:8080/api/users/1
+curl -w "@curl-format.txt" -o /dev/null -s http://localhost:8080/api/users/1
+
+# curl-format.txt
+# time_namelookup: %{time_namelookup}\n
+# time_connect: %{time_connect}\n
+# time_appconnect: %{time_appconnect}\n
+# time_pretransfer: %{time_pretransfer}\n
+# time_starttransfer: %{time_starttransfer}\n
+# time_total: %{time_total}\n
+# http_code: %{http_code}\n
+```
+
+### 数据库性能验证
+
+```bash
+# 检查慢查询
+curl http://localhost:8080/actuator/metrics/jdbc.connections.active
+
+# 使用 JMX 监控连接池
+jconsole
+
+# 检查数据库连接数
+mysql -e "SHOW PROCESSLIST" | wc -l
+```
+
+### JMeter 性能测试
+
+```xml
+<!-- user_test.jmx -->
+<?xml version="1.0" encoding="UTF-8"?>
+<jmeterTestPlan version="1.2">
+  <hashTree>
+    <TestPlan>
+      <elementProp name="TestPlan.user_defined_variables" elementType="Arguments">
+        <collectionProp name="Arguments.arguments">
+          <elementProp name="BASE_URL" elementType="Argument">
+            <stringProp name="Argument.name">BASE_URL</stringProp>
+            <stringProp name="Argument.value">http://localhost:8080</stringProp>
+          </elementProp>
+        </collectionProp>
+      </elementProp>
+    </TestPlan>
+    <hashTree>
+      <ThreadGroup>
+        <stringProp name="ThreadGroup.num_threads">100</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">10</stringProp>
+        <longProp name="ThreadGroup.duration">60</longProp>
+      </ThreadGroup>
+      <hashTree>
+        <HTTPSamplerProxy>
+          <stringProp name="HTTPSampler.domain">${BASE_URL}</stringProp>
+          <stringProp name="HTTPSampler.path">/api/users</stringProp>
+          <stringProp name="HTTPSampler.method">GET</stringProp>
+        </HTTPSamplerProxy>
+      </hashTree>
+    </hashTree>
+  </hashTree>
+</jmeterTestPlan>
+```
+
+```bash
+# 运行 JMeter 测试
+jmeter -n -t user_test.jmx -l result.jtl -e -o report/
+
+# 检查结果
+cat result.jtl | grep -c "true"
+```
+
+---
+
+## CI/CD 平台集成
+
+> **注意**：以下为各平台完整配置参考。实际项目应根据需求选择相应平台并调整配置。
+
+### GitHub Actions 完整配置
+
+```yaml
+name: Spring Boot 验证
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: test
+          MYSQL_DATABASE: testdb
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+        ports:
+          - 3306:3306
+
+    steps:
+      - name: Checkout 代码
+        uses: actions/checkout@v4
+
+      - name: 设置 JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: 编译项目
+        run: mvn -T 4 clean compile
+
+      - name: 运行测试
+        run: mvn -T 4 test
+
+      - name: 生成覆盖率报告
+        run: mvn jacoco:report
+
+      - name: 上传覆盖率报告
+        uses: codecov/codecov-action@v3
+        with:
+          files: target/site/jacoco/jacoco.xml
+
+      - name: 上传测试结果
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: test-results
+          path: target/surefire-reports/
+```
+
+### GitLab CI 完整配置
+
+```yaml
+# .gitlab-ci.yml
+
+image: maven:3.9-eclipse-temurin-21
+
+variables:
+  MAVEN_OPTS: "-Dmaven.repo.local=$CI_PROJECT_DIR/.m2/repository"
+  DOCKER_DRIVER: overlay2
+  DOCKER_TLS_CERTDIR: "/certs"
+
+stages:
+  - build
+  - test
+  - verify
+  - security
+  - docker
+  - deploy
+
+build:
+  stage: build
+  script:
+    - mvn -T 4 clean compile
+  artifacts:
+    paths:
+      - target/
+    expire_in: 1 hour
+
+unit-test:
+  stage: test
+  services:
+    - mysql:8.0
+  variables:
+    MYSQL_DATABASE: testdb
+    MYSQL_ROOT_PASSWORD: test
+  script:
+    - mvn -T 4 test
+  artifacts:
+    paths:
+      - target/surefire-reports/
+      - target/site/jacoco/
+    expire_in: 1 week
+  coverage: '/Lines: *(\d+\.\d+)%/'
+
+static-analysis:
+  stage: verify
+  script:
+    - mvn checkstyle:check
+    - mvn spotbugs:check
+  dependencies:
+    - build
+
+coverage-check:
+  stage: verify
+  script:
+    - mvn jacoco:check
+  dependencies:
+    - unit-test
+
+dependency-check:
+  stage: security
+  script:
+    - mvn org.owasp:dependency-check-maven:check
+  allow_failure: true
+
+docker-build:
+  stage: docker
+  image: docker:24
+  services:
+    - docker:24-dind
+  script:
+    - docker build -t $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA .
+    - docker build -t $CI_REGISTRY_IMAGE:latest .
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - docker push $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA
+    - docker push $CI_REGISTRY_IMAGE:latest
+
+trivy-scan:
+  stage: docker
+  image: aquasec/trivy:latest
+  script:
+    - trivy image --exit-code 1 --severity HIGH,CRITICAL $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA
+
+deploy-staging:
+  stage: deploy
+  image: alpine:3.18
+  script:
+    - echo "部署到测试环境"
+    # kubectl apply -f k8s/
+  environment:
+    name: staging
+    url: https://staging.example.com
+  only:
+    - develop
+
+deploy-production:
+  stage: deploy
+  image: alpine:3.18
+  script:
+    - echo "部署到生产环境"
+    # kubectl apply -f k8s/
+  environment:
+    name: production
+    url: https://example.com
+  when: manual
+  only:
+    - main
+```
+
+### Jenkins Pipeline 完整配置
+
+```groovy
+pipeline {
+    agent any
+
+    tools {
+        maven 'Maven 3.9'
+        jdk 'JDK 21'
+    }
+
+    environment {
+        MYSQL_DATABASE = 'testdb'
+        MYSQL_ROOT_PASSWORD = 'test'
+        DOCKER_IMAGE = "myapp:${BUILD_NUMBER}"
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Build') {
+            steps {
+                sh 'mvn -T 4 clean compile'
+            }
+        }
+
+        stage('Static Analysis') {
+            parallel {
+                stage('Checkstyle') {
+                    steps {
+                        sh 'mvn checkstyle:check'
+                    }
+                }
+                stage('SpotBugs') {
+                    steps {
+                        sh 'mvn spotbugs:check'
+                    }
+                }
+            }
+        }
+
+        stage('Test') {
+            steps {
+                sh 'mvn -T 4 test'
+            }
+            post {
+                always {
+                    junit 'target/surefire-reports/TEST-*.xml'
+                }
+            }
+        }
+
+        stage('Coverage') {
+            steps {
+                sh 'mvn jacoco:report'
+            }
+            post {
+                always {
+                    jacoco coverageCriteria: [
+                        [lineCoverage: 80.0, branchCoverage: 70.0]
+                    ]
+                }
+            }
+        }
+
+        stage('Dependency Check') {
+            steps {
+                sh 'mvn org.owasp:dependency-check-maven:check'
+            }
+        }
+
+        stage('Docker Build') {
+            steps {
+                script {
+                    def customImage = docker.build("${DOCKER_IMAGE}")
+                    customImage.inside { ->
+                        sh 'java -version'
+                    }
+                }
+            }
+        }
+
+        stage('Security Scan') {
+            steps {
+                sh "trivy image --exit-code 0 --severity HIGH,CRITICAL ${DOCKER_IMAGE}"
+            }
+        }
+
+        stage('Deploy Staging') {
+            when {
+                branch 'develop'
+            }
+            steps {
+                sh "echo 'Deploying to staging...'"
+                // sh "kubectl apply -f k8s/staging/"
+            }
+        }
+
+        stage('Deploy Production') {
+            when {
+                branch 'main'
+            }
+            steps {
+                input message: '部署到生产环境?', ok: '部署'
+                sh "echo 'Deploying to production...'"
+                // sh "kubectl apply -f k8s/production/"
+            }
+        }
+    }
+
+    post {
+        always {
+            cleanWs()
+        }
+        success {
+            emailext(
+                subject: "构建成功: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                body: "构建 ${env.BUILD_URL} 成功完成。",
+                to: "team@example.com"
+            )
+        }
+        failure {
+            emailext(
+                subject: "构建失败: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                body: "构建 ${env.BUILD_URL} 失败。",
+                to: "team@example.com"
+            )
+        }
+    }
+}
+```
+
+### Azure Pipelines 配置
+
+```yaml
+# azure-pipelines.yml
+
+trigger:
+  branches:
+    include:
+      - main
+      - develop
+
+pr:
+  branches:
+    include:
+      - main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  MAVEN_CACHE_FOLDER: $(Pipeline.Workspace)/.m2/repository
+  DOCKER_IMAGE: 'myapp:$(Build.BuildId)'
+
+stages:
+  - stage: Build
+    jobs:
+      - job: Build
+        steps:
+          - task: Maven@4
+            inputs:
+              mavenPomFile: 'pom.xml'
+              goals: 'clean compile'
+              options: '-T 4'
+              javaHomeOption: 'JDKVersion'
+              jdkVersionOption: '1.21'
+              mavenVersionOption: 'Default'
+
+  - stage: Test
+    jobs:
+      - job: Test
+        steps:
+          - task: Maven@4
+            inputs:
+              mavenPomFile: 'pom.xml'
+              goals: 'test'
+              options: '-T 4'
+              testResultsFiles: '**/surefire-reports/TEST-*.xml'
+              javaHomeOption: 'JDKVersion'
+              jdkVersionOption: '1.21'
+
+          - task: PublishCodeCoverageResults@1
+            inputs:
+              codeCoverageTool: 'JaCoCo'
+              summaryFileLocation: 'target/site/jacoco/jacoco.xml'
+
+  - stage: Security
+    jobs:
+      - job: Security
+        steps:
+          - task: Maven@4
+            inputs:
+              mavenPomFile: 'pom.xml'
+              goals: 'org.owasp:dependency-check-maven:check'
+
+  - stage: Docker
+    jobs:
+      - job: Docker
+        steps:
+          - task: Docker@2
+            inputs:
+              command: build
+              dockerfile: Dockerfile
+              tags: |
+                $(DOCKER_IMAGE)
+                myapp:latest
+
+          - script: |
+              docker run --rm -d -p 8080:8080 --name test-container $(DOCKER_IMAGE)
+              sleep 10
+              curl -f http://localhost:8080/actuator/health
+              docker stop test-container
+
+  - stage: Deploy
+    jobs:
+      - deployment: Staging
+        environment: 'staging'
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - script: |
+                    echo "Deploying to staging..."
 ```

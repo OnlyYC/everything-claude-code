@@ -1,6 +1,9 @@
 ---
 name: eval-harness
 description: Eval 驱动开发（EDD）框架：适配 Java 21 + Spring Boot 3 + Spring MVC + MyBatis-Plus + Maven + MySQL 技术栈的评估框架
+version: 1.1.0
+tech_stack: [Java 21, Spring Boot 3, MyBatis-Plus, MySQL, Maven]
+related_skills: [tdd-workflow, springboot-tdd, java-testing, verification-loop]
 tools: Read, Write, Edit, Bash, Grep, Glob
 ---
 
@@ -48,7 +51,7 @@ Eval 驱动开发将 evals 视为"AI 开发的单元测试"：
 
 ## 评分器类型
 
-### 1. 基于代码的评分器
+### 1. 基于代码的评分器（自动验证）
 
 使用代码的确定性检查：
 
@@ -61,18 +64,9 @@ mvn test -Dtest=UserServiceTest && echo "PASS" || echo "FAIL"
 
 # 检查构建是否成功
 mvn clean compile && echo "PASS" || echo "FAIL"
-
-# 检查特定方法是否存在
-grep -q "public User createUser CreateUserDTO" src/main/java/com/example/service/UserService.java && echo "PASS" || echo "FAIL"
-
-# 检查 MyBatis Mapper 是否存在
-grep -q "public interface UserMapper" src/main/java/com/example/mapper/UserMapper.java && echo "PASS" || echo "FAIL"
-
-# 检查 Controller 端点是否存在
-grep -q "@PostMapping\|@GetMapping\|@PutMapping\|@DeleteMapping" src/main/java/com/example/controller/UserController.java && echo "PASS" || echo "FAIL"
 ```
 
-### 2. 基于模型的评分器
+### 2. 基于模型的评分器（AI 评估）
 
 使用 Claude 评估开放式输出：
 
@@ -89,7 +83,7 @@ grep -q "@PostMapping\|@GetMapping\|@PutMapping\|@DeleteMapping" src/main/java/c
 理由：[解释]
 ```
 
-### 3. 人工评分器
+### 3. 人工评分器（手动审查）
 
 标记为手动审查：
 
@@ -284,7 +278,7 @@ EVAL 报告：user-management
 ### Maven 测试命令
 
 ```bash
-# 运行所有测试
+# 运行所有测试（Windows/macOS/Linux 通用）
 mvn test
 
 # 运行特定测试类
@@ -301,6 +295,12 @@ mvn surefire-report:report
 
 # 生成覆盖率报告
 mvn jacoco:report
+
+# 查看测试结果摘要（Unix-like systems only）
+mvn test | grep -E "(Tests run:|BUILD SUCCESS|BUILD FAILURE)"
+
+# 查看测试结果摘要（Windows PowerShell）
+mvn test | Select-String -Pattern "Tests run:|BUILD"
 ```
 
 ### 代码检查命令
@@ -351,3 +351,55 @@ src/
 ```
 
 **记住**：快速反馈胜过后期意外。在生产系统中将警告视为缺陷。保持高标准的代码质量和测试覆盖率。
+
+## 评分示例
+
+### 能力 Eval 评分示例
+
+```markdown
+## EVAL：用户注册功能
+
+### 能力 Evals
+1. 邮箱格式验证正确性 - 权重 20%
+2. 密码强度检查 - 权重 20%
+3. 数据持久化成功 - 权重 30%
+4. 返回正确的用户数据 - 权重 20%
+5. 错误处理完善 - 权重 10%
+
+评分标准：
+- 9-10分：所有功能正确实现，错误处理完善
+- 7-8分：核心功能正确，部分边界情况处理不足
+- 5-6分：基本功能可用，存在明显缺陷
+- 0-4分：功能不完整或无法正常工作
+```
+
+### 回归 Eval 评分示例
+
+```markdown
+## EVAL：订单支付功能回归测试
+
+### 回归 Evals
+- OrderServiceTest#testCreatePayment: PASS
+- OrderControllerTest#testPaymentAPI: PASS
+- PaymentIntegrationTest#testPaymentFlow: PASS
+- OrderMapperTest#testInsertOrder: PASS
+
+评分项：
+1. 所有测试通过 - 权重 40%
+2. 无性能回归 - 权重 20%
+3. 代码覆盖率未下降 - 权重 20%
+4. 无新增安全漏洞 - 权重 20%
+
+评分标准：
+- 9-10分：所有测试通过，无回归问题
+- 7-8分：核心功能通过，有轻微问题
+- 5-6分：部分测试失败，需要修复
+- 0-4分：严重回归，需要立即修复
+```
+
+## 相关技能
+
+- `tdd-workflow` - 测试驱动开发流程
+- `java-testing` - JUnit 5 + Mockito 测试指南
+- `springboot-tdd` - Spring Boot TDD 方法论
+- `verification-loop` - 完整项目验证流程

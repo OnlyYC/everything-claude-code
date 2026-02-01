@@ -1,6 +1,10 @@
 ---
 name: security-review
-description: Use this skill when adding authentication, handling user input, working with secrets, creating API endpoints, or implementing payment/sensitive features. Provides comprehensive security checklist and patterns for Java Spring Boot applications.
+description: 安全审查技能：认证授权、输入验证、密钥管理、SQL 注入预防、XSS/CSRF 防护、OAuth2/SSO、API 网关安全。适配 Java 21 + Spring Boot 3 + Spring Security 6 技术栈。
+version: 1.1.0
+tech_stack: [Java 21, Spring Boot 3.2, Spring Security 6, MyBatis-Plus, OAuth2]
+tools: Read, Write, Edit, Bash, Grep, Glob
+related_skills: [springboot-patterns, backend-patterns, springboot-verification]
 ---
 
 # 安全性审查技能
@@ -1078,26 +1082,730 @@ class SecurityTest {
 }
 ```
 
+---
+
+## Spring Security 6 高级特性
+
+> **注意**：以下为高级配置，适用于复杂安全场景。基础安全配置已在上文说明。
+
+### 自定义安全配置
+
+```java
+@Configuration
+@EnableWebSecurity
+@EnableMethodSecurity(prePostEnabled = true)
+public class SecurityConfig {
+
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        http
+            // 安全 Headers
+            .headers(headers -> headers
+                .contentSecurityPolicy(csp -> csp.policyDirectives(
+                    "default-src 'self'; " +
+                    "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
+                    "style-src 'self' 'unsafe-inline'; " +
+                    "img-src 'self' data: https:; " +
+                    "font-src 'self'; " +
+                    "connect-src 'self'; " +
+                    "frame-ancestors 'none';"
+                ))
+                .frameOptions(frame -> frame.deny())
+                .xssProtection(xss -> xss.headerValue("1; mode=block"))
+                .httpStrictTransportSecurity(hsts -> hsts
+                    .includeSubDomains(true)
+                    .preload(true)
+                    .maxAgeInSeconds(31536000)
+                )
+                .permissionsPolicy(permissions -> permissions.policy(
+                    "geolocation=(), " +
+                    "microphone=(), " +
+                    "camera=(), " +
+                    "payment=()"
+                ))
+            )
+            // CSRF 配置（根据 API 类型选择）
+            .csrf(csrf -> csrf
+                .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                .ignoringRequestMatchers("/api/auth/**", "/api/webhook/**")
+            )
+            // CORS 配置
+            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+            // Session 管理（无状态）
+            .sessionManagement(session -> session
+                .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                .maximumSessions(1)
+                .maxSessionsPreventsLogin(false)
+            )
+            // 异常处理
+            .exceptionHandling(exception -> exception
+                .authenticationEntryPoint(new BearerTokenAuthenticationEntryPoint())
+                .accessDeniedHandler(new BearerTokenAccessDeniedHandler())
+            )
+            // JWT 认证过滤器
+            .addFilterBefore(jwtAuthenticationFilter,
+                           UsernamePasswordAuthenticationFilter.class)
+            // 授权规则
+            .authorizeHttpRequests(auth -> auth
+                // 公开端点
+                .requestMatchers("/api/auth/**", "/api/public/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/products/**", "/api/categories/**").permitAll()
+                // 健康检查
+                .requestMatchers("/actuator/health").permitAll()
+                // 管理员端点
+                .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                // 用户端点
+                .requestMatchers("/api/user/**").hasAnyRole("USER", "ADMIN")
+                // API 文档
+                .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").hasRole("DEVELOPER")
+                // 其他请求需要认证
+                .anyRequest().authenticated()
+            )
+            // OAuth2 资源服务器
+            .oauth2ResourceServer(oauth2 -> oauth2
+                .jwt(jwt -> jwt
+                    .decoder(jwtDecoder())
+                    .jwtAuthenticationConverter(jwtAuthenticationConverter())
+                )
+            );
+
+        return http.build();
+    }
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+
+        // 生产环境应该指定具体域名
+        configuration.setAllowedOriginPatterns(List.of("*"));
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(List.of("*"));
+        configuration.setExposedHeaders(List.of("Authorization", "Content-Disposition"));
+        configuration.setAllowCredentials(true);
+        configuration.setMaxAge(3600L);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
+    }
+
+    @Bean
+    public JwtDecoder jwtDecoder() {
+        return NimbusJwtDecoder.withJwkSetUri(jwkSetUri).build();
+    }
+
+    @Bean
+    public JwtAuthenticationConverter jwtAuthenticationConverter() {
+        JwtGrantedAuthoritiesConverter authoritiesConverter = new JwtGrantedAuthoritiesConverter();
+        authoritiesConverter.setAuthorityPrefix("ROLE_");
+        authoritiesConverter.setAuthoritiesClaimName("roles");
+
+        JwtAuthenticationConverter authenticationConverter = new JwtAuthenticationConverter();
+        authenticationConverter.setJwtGrantedAuthoritiesConverter(authoritiesConverter);
+        return authenticationConverter;
+    }
+}
+```
+
+### 方法级安全注解
+
+```java
+@RestController
+@RequestMapping("/api/admin")
+public class AdminController {
+
+    // 要求 ADMIN 角色
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/users")
+    public ResponseEntity<Page<UserDTO>> listUsers(Pageable pageable) {
+        return ResponseEntity.ok(userService.listUsers(pageable));
+    }
+
+    // 要求用户只能访问自己的数据
+    @PreAuthorize("#userId == authentication.principal.id or hasRole('ADMIN')")
+    @GetMapping("/users/{userId}")
+    public ResponseEntity<UserDTO> getUser(@PathVariable Long userId) {
+        return ResponseEntity.ok(userService.getUserById(userId));
+    }
+
+    // 自定义权限表达式
+    @PreAuthorize("@userService.canDeleteUser(#userId, authentication)")
+    @DeleteMapping("/users/{userId}")
+    public ResponseEntity<Void> deleteUser(@PathVariable Long userId) {
+        userService.deleteUser(userId);
+        return ResponseEntity.noContent().build();
+    }
+
+    // 要求多个权限之一
+    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
+    @PatchMapping("/users/{userId}/status")
+    public ResponseEntity<Void> updateUserStatus(
+        @PathVariable Long userId,
+        @RequestBody UpdateStatusRequest request
+    ) {
+        userService.updateStatus(userId, request.getStatus());
+        return ResponseEntity.noContent().build();
+    }
+}
+
+@Service
+public class UserService {
+
+    public boolean canDeleteUser(Long userId, Authentication authentication) {
+        UserPrincipal principal = (UserPrincipal) authentication.getPrincipal();
+
+        // 管理员可以删除任何用户
+        if (principal.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"))) {
+            return true;
+        }
+
+        // 用户不能删除自己
+        if (principal.getId().equals(userId)) {
+            return false;
+        }
+
+        // 其他情况不允许
+        return false;
+    }
+}
+```
+
+### 多因素认证（MFA）
+
+```java
+@Service
+@RequiredArgsConstructor
+public class MfaService {
+
+    private final UserService userService;
+    private final TotpService totpService;
+
+    // 启用 MFA
+    public MfaSetupResponse enableMfa(Long userId) {
+        User user = userService.getById(userId);
+
+        // 生成密钥
+        String secret = totpService.generateSecret();
+
+        // 保存临时密钥
+        user.setMfaSecret(secret);
+        user.setMfaEnabled(false);
+        userService.update(user);
+
+        // 生成 QR 码
+        String qrCodeUrl = totpService.getQrCodeUrl(
+            user.getEmail(),
+            "MyApp",
+            secret
+        );
+
+        return new MfaSetupResponse(secret, qrCodeUrl);
+    }
+
+    // 验证并激活 MFA
+    public void verifyAndActivateMfa(Long userId, String code) {
+        User user = userService.getById(userId);
+
+        if (!totpService.verifyCode(user.getMfaSecret(), code)) {
+            throw new InvalidMfaCodeException("验证码错误");
+        }
+
+        user.setMfaEnabled(true);
+        userService.update(user);
+    }
+
+    // 验证 MFA 代码
+    public boolean verifyMfa(Long userId, String code) {
+        User user = userService.getById(userId);
+
+        if (!user.isMfaEnabled()) {
+            return true; // 未启用 MFA，直接通过
+        }
+
+        return totpService.verifyCode(user.getMfaSecret(), code);
+    }
+}
+```
+
+---
+
+## OAuth2 / SSO 集成
+
+### OAuth2 客户端配置
+
+```yaml
+# application.yml
+spring:
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID}
+            client-secret: ${GOOGLE_CLIENT_SECRET}
+            scope: email, profile
+            redirect-uri: "{baseUrl}/login/oauth2/code/google"
+          github:
+            client-id: ${GITHUB_CLIENT_ID}
+            client-secret: ${GITHUB_CLIENT_SECRET}
+            scope: read:user, user:email
+          keycloak:
+            client-id: my-app
+            client-secret: ${KEYCLOAK_CLIENT_SECRET}
+            authorization-grant-type: authorization_code
+            redirect-uri: "{baseUrl}/login/oauth2/code/keycloak"
+            scope: openid, profile, email
+        provider:
+          keycloak:
+            issuer-uri: ${KEYCLOAK_ISSUER_URI}
+            user-name-attribute: preferred_username
+```
+
+### OAuth2 登录配置
+
+```java
+@Configuration
+@EnableWebSecurity
+public class OAuth2SecurityConfig {
+
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        http
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/", "/login", "/error").permitAll()
+                .anyRequest().authenticated()
+            )
+            .oauth2Login(oauth2 -> oauth2
+                .loginPage("/login")
+                .successHandler(oauth2AuthenticationSuccessHandler())
+                .failureHandler(oauth2AuthenticationFailureHandler())
+                .userInfoEndpoint(userInfo -> userInfo
+                    .userService(customOAuth2UserService())
+                )
+            )
+            .logout(logout -> logout
+                .logoutSuccessUrl("/")
+                .invalidateHttpSession(true)
+                .clearAuthentication(true)
+            );
+
+        return http.build();
+    }
+
+    @Bean
+    public OAuth2AuthenticationSuccessHandler oauth2AuthenticationSuccessHandler() {
+        return (request, response, authentication) -> {
+            OAuth2User oAuth2User = (OAuth2User) authentication.getPrincipal();
+
+            // 获取或创建用户
+            User user = userService.findOrCreateOAuth2User(
+                registrationId,
+                oAuth2User
+            );
+
+            // 生成 JWT
+            String token = jwtTokenProvider.generateToken(
+                new UsernamePasswordAuthenticationToken(
+                    user,
+                    null,
+                    user.getAuthorities()
+                )
+            );
+
+            // 重定向到前端，携带 token
+            String redirectUrl = String.format(
+                "%s?token=%s",
+                frontendUrl,
+                token
+            );
+            response.sendRedirect(redirectUrl);
+        };
+    }
+
+    @Bean
+    public OAuth2UserService<OAuth2UserRequest, OAuth2User> customOAuth2UserService() {
+        return new CustomOAuth2UserService();
+    }
+}
+```
+
+### Keycloak SSO 集成
+
+```java
+@Configuration
+@EnableWebSecurity
+public class KeycloakSecurityConfig {
+
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        http
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/api/public/**").permitAll()
+                .anyRequest().authenticated()
+            )
+            .oauth2ResourceServer(oauth2 -> oauth2
+                .jwt(jwt -> jwt
+                    .decoder(jwtDecoder())
+                    .jwtAuthenticationConverter(jwtAuthenticationConverter())
+                )
+            );
+
+        return http.build();
+    }
+
+    @Bean
+    public JwtDecoder jwtDecoder() {
+        return NimbusJwtDecoder.withJwkSetUri(
+            keycloakProperties.getJwkSetUri()
+        ).build();
+    }
+
+    @Bean
+    public JwtAuthenticationConverter jwtAuthenticationConverter() {
+        JwtGrantedAuthoritiesConverter authoritiesConverter =
+            new JwtGrantedAuthoritiesConverter();
+        authoritiesConverter.setAuthorityPrefix("ROLE_");
+        authoritiesConverter.setAuthoritiesClaimName("roles");
+
+        JwtAuthenticationConverter authenticationConverter =
+            new JwtAuthenticationConverter();
+        authenticationConverter.setJwtGrantedAuthoritiesConverter(
+            authoritiesConverter
+        );
+        return authenticationConverter;
+    }
+}
+```
+
+### SSO 用户同步
+
+```java
+@Service
+@RequiredArgsConstructor
+public class SsoUserService {
+
+    private final UserRepository userRepository;
+    private final RoleRepository roleRepository;
+
+    @Transactional
+    public User syncSsoUser(OAuth2User oAuth2User, String registrationId) {
+        String email = oAuth2User.getAttribute("email");
+
+        return userRepository.findByEmail(email)
+            .orElseGet(() -> createSsoUser(oAuth2User, registrationId));
+    }
+
+    private User createSsoUser(OAuth2User oAuth2User, String registrationId) {
+        User user = new User();
+        user.setEmail(oAuth2User.getAttribute("email"));
+        user.setUsername(extractUsername(oAuth2User, registrationId));
+        user.setAuthProvider(registrationId);
+        user.setAuthProviderId(oAuth2User.getAttribute("sub"));
+
+        // 分配默认角色
+        Role defaultRole = roleRepository.findByName("USER")
+            .orElseThrow(() -> new IllegalStateException("默认角色不存在"));
+        user.setRoles(Set.of(defaultRole));
+
+        return userRepository.save(user);
+    }
+}
+```
+
+---
+
+## API 网关安全模式
+
+### Spring Cloud Gateway 安全配置
+
+```yaml
+# application.yml
+spring:
+  cloud:
+    gateway:
+      routes:
+        - id: user-service
+          uri: lb://user-service
+          predicates:
+            - Path=/api/users/**
+          filters:
+            - StripPrefix=1
+            - name: RateLimit
+              args:
+                redis-rate-limiter.replenishRate: 10
+                redis-rate-limiter.burstCapacity: 20
+        - id: admin-service
+          uri: lb://admin-service
+          predicates:
+            - Path=/api/admin/**
+          filters:
+            - StripPrefix=1
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 5
+                redis-rate-limiter.burstCapacity: 10
+```
+
+### 网关安全过滤器
+
+```java
+@Component
+@RequiredArgsConstructor
+public class GatewaySecurityFilter implements GlobalFilter, Ordered {
+
+    private final JwtTokenProvider jwtTokenProvider;
+    private final RedisTemplate<String, String> redisTemplate;
+
+    @Override
+    public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
+        String path = exchange.getRequest().getURI().getPath();
+
+        // 跳过公开端点
+        if (isPublicPath(path)) {
+            return chain.filter(exchange);
+        }
+
+        // 提取 token
+        String token = extractToken(exchange.getRequest());
+
+        if (token == null || !jwtTokenProvider.validateToken(token)) {
+            return unauthorized(exchange);
+        }
+
+        // 检查 token 是否在黑名单
+        if (isTokenBlacklisted(token)) {
+            return unauthorized(exchange);
+        }
+
+        // 验证权限
+        if (!hasRequiredPermission(exchange.getRequest(), token)) {
+            return forbidden(exchange);
+        }
+
+        // 添加用户信息到请求头
+        ServerHttpRequest mutatedRequest = exchange.getRequest().mutate()
+            .header("X-User-Id", extractUserId(token))
+            .header("X-User-Roles", extractUserRoles(token))
+            .build();
+
+        return chain.filter(exchange.mutate().request(mutatedRequest).build());
+    }
+
+    private String extractToken(ServerHttpRequest request) {
+        String bearerToken = request.getHeaders().getFirst("Authorization");
+        if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
+            return bearerToken.substring(7);
+        }
+        return null;
+    }
+
+    private Mono<Void> unauthorized(ServerWebExchange exchange) {
+        ServerHttpResponse response = exchange.getResponse();
+        response.setStatusCode(HttpStatus.UNAUTHORIZED);
+        response.getHeaders().setContentType(MediaType.APPLICATION_JSON);
+
+        String body = "{\"error\": \"未认证\", \"path\": \"" +
+                     exchange.getRequest().getPath().value() + "\"}";
+
+        DataBuffer buffer = response.bufferFactory().wrap(body.getBytes());
+        return response.writeWith(Mono.just(buffer));
+    }
+
+    private Mono<Void> forbidden(ServerWebExchange exchange) {
+        ServerHttpResponse response = exchange.getResponse();
+        response.setStatusCode(HttpStatus.FORBIDDEN);
+        response.getHeaders().setContentType(MediaType.APPLICATION_JSON);
+
+        String body = "{\"error\": \"无权限\", \"path\": \"" +
+                     exchange.getRequest().getPath().value() + "\"}";
+
+        DataBuffer buffer = response.bufferFactory().wrap(body.getBytes());
+        return response.writeWith(Mono.just(buffer));
+    }
+
+    @Override
+    public int getOrder() {
+        return -100; // 高优先级
+    }
+}
+```
+
+### 速率限制配置
+
+```java
+@Configuration
+@EnableRedisRateLimiter
+public class RateLimiterConfig {
+
+    @Bean
+    public RedisRateLimiter redisRateLimiter(ReactiveRedisTemplate<String, String> redisTemplate) {
+        return new DefaultRedisRateLimiter(redisTemplate) {
+            @Override
+            public Mono<Response> isAllowed(String routeId, String id) {
+                // 根据不同端点应用不同速率限制
+                if (routeId.contains("admin")) {
+                    // 管理端点：更严格
+                    return super.isAllowed(routeId, id,
+                        new Config(5, 10, Duration.ofMinutes(1)));
+                } else if (routeId.contains("api")) {
+                    // API 端点：标准限制
+                    return super.isAllowed(routeId, id,
+                        new Config(20, 40, Duration.ofMinutes(1)));
+                }
+                // 默认限制
+                return super.isAllowed(routeId, id);
+            }
+        };
+    }
+}
+```
+
+### 请求验证过滤器
+
+```java
+@Component
+public class RequestValidationFilter implements GlobalFilter, Ordered {
+
+    private static final Set<String> ALLOWED_METHODS = Set.of(
+        "GET", "POST", "PUT", "PATCH", "DELETE"
+    );
+
+    private static final long MAX_REQUEST_SIZE = 10 * 1024 * 1024; // 10MB
+
+    private static final Set<String> DANGEROUS_PATHS = Set.of(
+        "../", "..", "./", "%2e%2e", "%2e%2e%2f"
+    );
+
+    @Override
+    public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
+        ServerHttpRequest request = exchange.getRequest();
+
+        // 检查 HTTP 方法
+        if (!ALLOWED_METHODS.contains(request.getMethod().name())) {
+            return methodNotAllowed(exchange);
+        }
+
+        // 检查路径遍历
+        String path = request.getURI().getPath();
+        for (String dangerous : DANGEROUS_PATHS) {
+            if (path.contains(dangerous)) {
+                return badRequest(exchange, "检测到非法路径");
+            }
+        }
+
+        // 检查请求大小
+        String contentLength = request.getHeaders().getFirst("Content-Length");
+        if (contentLength != null) {
+            long size = Long.parseLong(contentLength);
+            if (size > MAX_REQUEST_SIZE) {
+                return payloadTooLarge(exchange);
+            }
+        }
+
+        // 检查 Content-Type
+        String contentType = request.getHeaders().getFirst("Content-Type");
+        if (contentType != null && !isValidContentType(contentType)) {
+            return unsupportedMediaType(exchange);
+        }
+
+        return chain.filter(exchange);
+    }
+
+    private boolean isValidContentType(String contentType) {
+        return contentType.startsWith("application/json") ||
+               contentType.startsWith("multipart/form-data") ||
+               contentType.startsWith("application/x-www-form-urlencoded");
+    }
+
+    @Override
+    public int getOrder() {
+        return -99;
+    }
+}
+```
+
+### 安全 Headers 过滤器
+
+```java
+@Component
+public class SecurityHeadersFilter implements GlobalFilter, Ordered {
+
+    @Override
+    public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
+        ServerHttpResponse response = exchange.getResponse();
+
+        // 添加安全响应头
+        response.getHeaders().set("X-Content-Type-Options", "nosniff");
+        response.getHeaders().set("X-Frame-Options", "DENY");
+        response.getHeaders().set("X-XSS-Protection", "1; mode=block");
+        response.getHeaders().set("Strict-Transport-Security",
+                                 "max-age=31536000; includeSubDomains");
+        response.getHeaders().set("Content-Security-Policy",
+                                 "default-src 'self'; script-src 'self'; " +
+                                 "style-src 'self' 'unsafe-inline'; " +
+                                 "img-src 'self' data: https:; " +
+                                 "frame-ancestors 'none'");
+        response.getHeaders().set("Referrer-Policy", "strict-origin-when-cross-origin");
+        response.getHeaders().set("Permissions-Policy",
+                                 "geolocation=(), microphone=(), camera=()");
+
+        return chain.filter(exchange);
+    }
+
+    @Override
+    public int getOrder() {
+        return -98;
+    }
+}
+```
+
+---
+
 ## 部署前安全检查清单
 
-任何生产部署前：
+任何生产部署前必须完成以下检查：
 
-- [ ] **密钥**：无写死密钥，全在环境变量中
-- [ ] **输入验证**：所有用户输入已验证（@Valid）
-- [ ] **SQL 注入**：所有查询使用 #{} 参数化
-- [ ] **XSS**：用户输入已净化，CSP 已配置
-- [ ] **CSRF**：保护已启用（状态ful API）
-- [ ] **认证**：JWT 正确配置，密码 BCrypt 加密
-- [ ] **授权**：@PreAuthorize 检查已就位
-- [ ] **速率限制**：所有端点已启用
-- [ ] **HTTPS**：生产环境强制使用，HSTS 已启用
-- [ ] **安全标头**：CSP、X-Frame-Options、X-XSS-Protection
-- [ ] **错误处理**：错误中无敏感数据
-- [ ] **日志记录**：无敏感数据，生产级别 INFO
-- [ ] **依赖**：最新，无高危漏洞
-- [ ] **CORS**：正确配置白名单
-- [ ] **文件上传**：已验证（大小、类型、魔数）
-- [ ] **密码策略**：强度要求、加密存储
+### 密钥与凭证
+- [ ] 无写死密钥，全部在环境变量中
+- [ ] `.env` 和敏感配置在 `.gitignore` 中
+- [ ] Git 历史中无密钥泄露
+
+### 输入验证
+- [ ] 所有用户输入使用 `@Valid` 验证
+- [ ] DTO 使用 JSR-303 注解
+- [ ] 文件上传受限（大小、类型、魔数）
+
+### SQL 安全
+- [ ] 所有查询使用 `#{}` 参数化
+- [ ] 不使用 `${}` 传递用户输入
+- [ ] LIKE 查询使用 `CONCAT` 拼接
+
+### 认证授权
+- [ ] JWT 正确配置
+- [ ] 密码使用 BCrypt 加密
+- [ ] `@PreAuthorize` 检查已就位
+
+### Web 安全
+- [ ] 用户输入已净化（XSS 防护）
+- [ ] CSP 已配置
+- [ ] CSRF 保护已启用（状态ful API）
+- [ ] CORS 正确配置白名单
+
+### 运行安全
+- [ ] 所有端点已启用速率限制
+- [ ] 生产环境强制 HTTPS
+- [ ] HSTS 已启用
+- [ ] 安全响应头已配置
+
+### 数据保护
+- [ ] 错误响应无敏感数据
+- [ ] 日志中无密码、token
+- [ ] 生产日志级别为 INFO
+
+### 依赖安全
+- [ ] 依赖保持最新
+- [ ] 无已知高危漏洞（CVSS >= 7）
 
 ## 资源
 

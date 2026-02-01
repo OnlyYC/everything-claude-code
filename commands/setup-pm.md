@@ -133,6 +133,18 @@ echo "当前构建工具: $(jq -r .buildTool .claude/build-tool.json)"
 
 ## 环境变量
 
+可通过环境变量覆盖自动检测：
+
+```bash
+# 设置构建工具（优先级最高）
+export CLAUDE_BUILD_TOOL=maven  # 或 gradle
+```
+
+**Windows (PowerShell):**
+```powershell
+$env:CLAUDE_BUILD_TOOL = "maven"
+```
+
 ## Maven 常用命令
 
 | 命令 | 说明 |

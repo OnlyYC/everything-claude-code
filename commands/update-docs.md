@@ -135,6 +135,28 @@ grep -E "^[a-z]" application.yml | head -10 >> docs/RUNBOOK.md
 
 ### 第六步：识别过时的文档
 
+检查文档中的版本、依赖和配置是否与当前代码一致：
+
+```bash
+# 检查 README.md 中的版本是否过时
+CURRENT_VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+if ! grep -q "$CURRENT_VERSION" README.md; then
+    echo "警告: README.md 中的版本可能与 pom.xml 不一致"
+fi
+
+# 检查文档中提到的依赖版本
+POM_DEPS=$(mvn dependency:list | grep -E "^\[INFO\]" | wc -l)
+echo "当前依赖数量: $POM_DEPS"
+```
+
+报告格式：
+```
+文档新鲜度检查：
+  README.md:     [最新/过时]
+  docs/API.md:   [需要更新/已弃用]
+  docs/DEPLOY.md: [最新/过时]
+```
+
 本指令支持以下环境：
 - **Windows**: PowerShell 5.1+ 或 Git Bash
 - **macOS/Linux**: Bash 4.0+
@@ -246,7 +268,7 @@ mvn spring-boot:run
 
 ## 部署流程
 
-**Windows:**
+**Windows (PowerShell):**
 ```powershell
 mvn clean package
 java -jar target\app.jar --spring.profiles.active=prod

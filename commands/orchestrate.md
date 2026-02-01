@@ -17,25 +17,25 @@ command: /orchestrate [feature|bugfix|refactor|security|custom] [task-descriptio
 ### feature
 完整的功能实现工作流程：
 ```
-planner -> java-tdd-guide -> code-reviewer -> java-reviewer
+planner Agent → tdd Agent → code-review Agent → java-review Agent
 ```
 
 ### bugfix
 Bug 调查和修复工作流程：
 ```
-explorer -> java-tdd-guide -> code-reviewer
+Explore Agent → tdd Agent → code-review Agent
 ```
 
 ### refactor
 安全重构工作流程：
 ```
-architect -> code-reviewer -> java-tdd-guide
+architect Agent → code-review Agent → tdd Agent
 ```
 
 ### security
 以安全性为焦点的审查：
 ```
-java-reviewer -> code-reviewer -> architect
+java-review Agent → code-review Agent → architect Agent
 ```
 
 ## 执行模式
@@ -77,7 +77,7 @@ Agent 之间，建立交接文档：
 ====================
 工作流程：feature
 任务：新增用户认证模块
-Agents：planner -> java-tdd-guide -> code-reviewer -> java-reviewer
+Agents：planner → tdd → code-review → java-review
 
 摘要
 -------
@@ -85,10 +85,10 @@ Agents：planner -> java-tdd-guide -> code-reviewer -> java-reviewer
 
 AGENT 输出
 -------------
-Planner：[摘要]
-Java TDD Guide：[摘要]
-Code Reviewer：[摘要]
-Java Reviewer：[摘要]
+Planner Agent：[摘要]
+TDD Agent：[摘要]
+Code Review Agent：[摘要]
+Java Review Agent：[摘要]
 
 变更的文件
 -------------
