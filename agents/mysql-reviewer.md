@@ -13,9 +13,22 @@ model: glm-4.7
 
 1. **查询性能审查** - 检查索引使用、EXPLAIN 分析、N+1 查询
 2. **表结构审查** - 验证数据类型、三字段、命名规范
-3. **安全审查** - 检测 SQL 注入、敏感数据存储
-4. **索引设计审查** - 评估索引效率、联合索引设计
-5. **迁移脚本审查** - 检查 DDL 语句的正确性
+3. **索引设计审查** - 评估索引效率、联合索引设计
+4. **迁移脚本审查** - 检查 DDL 语句的正确性
+5. **基础安全检查** - 检测 SQL 注入（复杂安全问题交由 security-reviewer）
+
+## 与其他 Agent 的职责边界
+
+| 审查领域 | mysql-reviewer | 其他 Agent |
+|----------|----------------|------------|
+| **基础安全** | SQL注入（MyBatis ${}） | security-reviewer（深度 OWASP） |
+| **SQL 优化** | 索引设计、查询性能 | java-reviewer（N+1 查询代码模式） |
+| **表结构** | 数据类型、三字段、命名 | architect（架构设计） |
+| **迁移脚本** | DDL 语句正确性 | build-error-resolver（执行错误） |
+
+**明确边界：**
+- ✅ **mysql-reviewer 做**：审查 SQL 文件、检查索引、验证表结构、生成优化建议
+- ❌ **mysql-reviewer 不做**：深度安全扫描（security-reviewer）、架构设计（architect）
 
 ## 触发条件
 
@@ -49,296 +62,168 @@ mysql-reviewer
 ## 审查流程
 
 ```
-扫描 SQL 文件 → 检查查询性能 → 验证表结构 → 安全检查 → 生成报告
+┌─────────────────────────────────────────────────────────────────┐
+│                      1. 扫描 SQL 文件                           │
+│  ┌──────────────┐  ┌──────────────┐  ┌────────────────────────┐ │
+│  │ Mapper XML   │→ │ 迁移脚本 SQL │→ │   MyBatis Java         │ │
+│  └──────────────┘  └──────────────┘  └────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────┘
+                            │
+                            ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                      2. 分级审查执行                             │
+│  ┌──────────────┐  ┌──────────────┐  ┌────────────────────────┐ │
+│  │ 性能问题扫描 │→ │ 结构规范检查 │→ │   安全风险扫描         │ │
+│  │ (索引/查询)  │  │ (类型/命名)  │→ │   (SQL注入)            │ │
+│  └──────────────┘  └──────────────┘  └────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────┘
+                            │
+                            ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                      3. 计算审查分数                             │
+│  ┌──────────────┐  ┌──────────────┐  ┌────────────────────────┐ │
+│  │ 统计问题数量 │→ │ 计算扣分项   │→ │   判定通过/驳回        │ │
+│  └──────────────┘  └──────────────┘  └────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────┘
+                            │
+                            ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                      4. 输出审查报告                             │
+│  问题清单 + 修复SQL + 审查结论 + 量化分数                         │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-### 1. 扫描 SQL 文件
-- *.xml (MyBatis)
-- *Mapper.java
-- *.sql (迁移脚本)
+## 统一输出格式
 
-### 2. 检查查询性能
-- WHERE/JOIN 列是否有索引
-- 是否存在 SELECT *
-- 是否存在 N+1 查询
-- 运行 EXPLAIN 分析复杂查询
-
-### 3. 验证表结构设计
-- 数据类型是否正确
-- 是否包含三字段（create_time、update_time、is_deleted）
-- 命名是否小写+下划线
-- 主键是否使用 BIGINT
-
-### 4. 检查安全风险
-- 是否使用 ${} 拼接
-- 敏感数据是否加密
-
-### 5. 生成审查报告
-
-## 审查输出格式
-
+**问题条目格式（所有 reviewer 使用）：**
 ```
-[严重] WHERE列缺少索引
-文件: src/main/resources/mapper/UserMapper.xml:15
-问题: status列无索引，全表扫描
-修复: CREATE INDEX idx_status ON users(status);
+[严重级别] 问题名称
+文件: path/to/File.xml:行号
+规则: 违反的规则或最佳实践
+修复: 具体的修复方案（SQL 语句）
 ```
 
-```
-[警告] 数据类型不当
-文件: src/main/resources/db/migration/V2__create_orders.sql:10
-问题: id使用INT，21亿上限不足
-修复: ALTER TABLE orders MODIFY COLUMN id BIGINT;
-```
+**严重级别定义：**
+- `[严重]` - 阻塞性问题，必须修复才能部署
+- `[警告]` - 重要问题，强烈建议修复
+- `[建议]` - 优化建议，可选修复
 
-```
-[建议] 添加字段注释
-文件: src/main/resources/db/migration/V1__init.sql:25
-建议: 为所有字段添加COMMENT提高可维护性
-```
+## 量化审查标准
+
+### 审查评分系统
+
+| 指标 | 权重 | 计算方式 | 扣分标准 |
+|------|------|----------|----------|
+| 严重问题 | - | 每个 -20 分 | 存在即扣分 |
+| 警告问题 | - | 每个 -5 分 | 每个扣 5 分 |
+| 建议问题 | - | 每个 -1 分 | 每个扣 1 分 |
+| 基础分 | 100 | 起始分数 | - |
+
+### 通过标准
+
+| 等级 | 分数范围 | 结论 | 可部署 |
+|------|----------|------|--------|
+| A | 90-100 | ✅ 优秀 | 是 |
+| B | 75-89 | ✅ 良好 | 是 |
+| C | 60-74 | ⚠️ 需改进 | 有条件 |
+| D | < 60 | ❌ 不通过 | 否 |
+
+**有条件通过规则：**
+- 分数 60-74：警告问题 < 5 个，且无严重问题
+- 分数 < 60：必须驳回
 
 ## 核心审查规则
 
-### 🔴 严重（阻塞）
+### 🔴 严重（必须修复，每个 -20 分）
 
 | 问题 | 检测模式 | 修复 |
 |------|----------|------|
 | WHERE列无索引 | `WHERE.*status.*=.*1` | `CREATE INDEX idx_status ON users(status)` |
 | JOIN列无索引 | `JOIN.*ON.*user_id` | `CREATE INDEX idx_user_id ON orders(user_id)` |
 | SELECT * | `SELECT \*` | 列出具体字段名 |
-| ${}拼接 | `\$\{.*\}` | 使用 `#{}` |
+| ${}拼接 | `\$\{.*\}` 在 MyBatis | 使用 `#{}` |
 | 外键无索引 | `BIGINT.*user_id` 无索引 | 添加索引 |
 | 硬编码密码 | `password.*=.*["\'].*["\']` | `${DB_PASSWORD}` |
+| 主键用INT | `INT.*PRIMARY KEY` | 改用 BIGINT |
 
-### 🟡 高优先级
+### 🟡 警告（建议修复，每个 -5 分）
 
-| 问题 | 规则 |
-|------|------|
-| ID用INT | 必须使用 BIGINT |
-| 金额用FLOAT | 必须使用 DECIMAL |
-| 时间用TIMESTAMP | 必须使用 DATETIME（2038问题） |
-| 缺少三字段 | 必须包含 create_time、update_time、is_deleted |
-| 命名不规范 | 必须小写+下划线 |
-| N+1查询 | 循环中查库，改用批量查询 |
+| 问题 | 检测模式 | 影响 |
+|------|----------|------|
+| ID用INT | `INT.*PRIMARY KEY` | 21亿上限不足 |
+| 金额用FLOAT | `FLOAT.*amount\|amount.*FLOAT` | 精度丢失 |
+| 时间用TIMESTAMP | `TIMESTAMP` | 2038问题 |
+| 缺少三字段 | 无 `create_time\|update_time\|is_deleted` | 审计缺失 |
+| 命名不规范 | `[A-Z]{2,}` 或驼峰 | 兼容性问题 |
+| N+1查询 | 循环中查库模式 | 性能问题 |
+| VARCHAR无长度 | `VARCHAR` 无长度 | 性能不确定 |
+| 缺少唯一索引 | 业务唯一字段无 UNIQUE | 数据一致性风险 |
 
-### 🔵 中优先级
+### 🔵 建议（可选修复，每个 -1 分）
 
-| 问题 | 建议 |
-|------|------|
-| VARCHAR无长度 | 指定合理长度（如 VARCHAR(100)） |
-| 缺少唯一索引 | 业务唯一字段添加 UNIQUE |
-| 无表前缀 | 建议添加业务前缀（如 tb_） |
-| 缺少注释 | 表和字段添加 COMMENT |
+| 问题 | 检测模式 | 建议 |
+|------|----------|------|
+| 无表前缀 | 表名无业务前缀 | 添加 `tb_` 前缀 |
+| 缺少注释 | 字段无 COMMENT | 添加注释说明 |
+| 字符集不一致 | 非 `utf8mb4` | 统一使用 utf8mb4 |
+| 索引过多 | 单表索引 > 5 个 | 合并或删除冗余索引 |
 
-## 诊断命令
+## MySQL 特定诊断命令
 
 ```bash
 # ===== SQL 文件扫描 =====
 # 查找所有 Mapper XML
-find src/main/resources -name "*Mapper.xml"
+Glob: **/resources/mapper/*Mapper.xml
 
 # 查找所有迁移脚本
-find src/main/resources/db -name "*.sql"
+Glob: **/resources/db/**/*.sql
 
 # 查找未使用索引的查询
-grep -rn "WHERE\|JOIN" --include="*.xml" src/main/resources/mapper/
+Grep: WHERE|JOIN
+Glob: **/mapper/*.xml
+Output: content
 
 # 查找 SELECT *
-grep -rn "SELECT \*" --include="*.xml" src/main/resources/mapper/
+Grep: SELECT\s*\*
+Glob: **/mapper/*.xml
+Output: content
 
 # 查找 ${} 拼接（注入风险）
-grep -rn '\${' --include="*.xml" src/main/resources/mapper/
+Grep: \${[^}]+}
+Glob: **/mapper/*.xml
+Output: content
 
 # 查找表定义
-grep -rn "CREATE TABLE" --include="*.sql" src/main/resources/
-
-# ===== 数据库连接命令 =====
-# EXPLAIN 分析（需要数据库连接）
-mysql -h $MYSQL_HOST -u $MYSQL_USER -p$MYSQL_PASSWORD -e \
-  "EXPLAIN SELECT * FROM orders WHERE customer_id = 123"
-
-# 查看表索引
-mysql -h $MYSQL_HOST -u $MYSQL_USER -p$MYSQL_PASSWORD -e \
-  "SHOW INDEX FROM users;"
-
-# 查看表结构
-mysql -h $MYSQL_HOST -u $MYSQL_USER -p$MYSQL_PASSWORD -e \
-  "SHOW CREATE TABLE users;"
-
-# 查看慢查询配置
-mysql -h $MYSQL_HOST -u $MYSQL_USER -p$MYSQL_PASSWORD -e \
-  "SHOW VARIABLES LIKE 'slow_query%';"
-
-# ===== 性能分析 =====
-# 查看表统计信息
-mysql -h $MYSQL_HOST -u $MYSQL_USER -p$MYSQL_PASSWORD -e \
-  "SELECT table_name, table_rows, data_length, index_length \
-   FROM information_schema.tables WHERE table_schema = DATABASE();"
-
-# 查看索引使用情况
-mysql -h $MYSQL_HOST -u $MYSQL_USER -p$MYSQL_PASSWORD -e \
-  "SELECT table_name, index_name, cardinality, column_name \
-   FROM information_schema.statistics WHERE table_schema = DATABASE() \
-   ORDER BY table_name, index_name, seq_in_index;"
+Grep: CREATE TABLE
+Glob: **/db/**/*.sql
+Output: content
 
 # ===== 数据类型检查 =====
 # 查找 INT 主键
-grep -rn "INT.*PRIMARY KEY" --include="*.sql" src/main/resources/
+Grep: INT.*PRIMARY KEY
+Glob: **/db/**/*.sql
+Output: content
 
 # 查找 FLOAT 金额字段
-grep -rn "FLOAT.*amount\|amount.*FLOAT" --include="*.sql" src/main/resources/
+Grep: FLOAT.*amount|amount.*FLOAT
+Glob: **/db/**/*.sql
+Output: content
 
 # 查找 TIMESTAMP 时间字段
-grep -rn "TIMESTAMP" --include="*.sql" src/main/resources/
+Grep: TIMESTAMP
+Glob: **/db/**/*.sql
+Output: content
 
 # ===== 命名规范检查 =====
 # 查找大写表名
-grep -rn "CREATE TABLE [A-Z]" --include="*.sql" src/main/resources/
+Grep: CREATE TABLE [A-Z]
+Glob: **/db/**/*.sql
+Output: content
 
 # 查找大写字段名
-grep -rn "[A-Z]{2,}" --include="*.sql" src/main/resources/
-```
-
-## 审查示例
-
-### 示例 1：优化查询性能
-
-**问题代码：**
-```xml
-<!-- UserMapper.xml -->
-<select id="findByStatus" resultType="User">
-    SELECT * FROM users WHERE status = 1
-</select>
-
-<select id="findUserOrders" resultType="Order">
-    SELECT o.* FROM orders o
-    WHERE o.user_id = #{userId}
-</select>
-```
-
-**审查结果：**
-```
-[严重] SELECT * 使用
-文件: UserMapper.xml:2
-修复: SELECT id, username, email, status FROM users WHERE status = 1
-
-[严重] WHERE列无索引
-文件: UserMapper.xml:2
-修复: CREATE INDEX idx_status ON users(status);
-
-[严重] JOIN列无索引
-文件: UserMapper.xml:6
-修复: CREATE INDEX idx_user_id ON orders(user_id);
-
-[警告] 建议添加字段注释
-修复: 为 users 表添加 COMMENT
-```
-
-**优化后：**
-```xml
-<select id="findByStatus" resultType="User">
-    SELECT id, username, email, status, create_time
-    FROM users
-    WHERE status = #{status}
-</select>
-
-<select id="findUserOrders" resultType="Order">
-    SELECT o.id, o.order_no, o.total_amount, o.status
-    FROM orders o
-    WHERE o.user_id = #{userId}
-    ORDER BY o.create_time DESC
-</select>
-```
-
-**索引创建：**
-```sql
--- 状态索引
-CREATE INDEX idx_status ON users(status);
-
--- 用户ID索引
-CREATE INDEX idx_user_id ON orders(user_id);
-
--- 联合索引（如果经常按用户+状态查询）
-CREATE INDEX idx_user_status ON orders(user_id, status);
-```
-
-### 示例 2：表结构设计审查
-
-**问题代码：**
-```sql
-CREATE TABLE Orders (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    OrderNo VARCHAR(50),
-    UserId INT,
-    TotalAmount FLOAT(10,2),
-    Status INT,
-    CreateTime TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-```
-
-**审查结果：**
-```
-[严重] ID使用INT，21亿上限不足
-修复: id BIGINT PRIMARY KEY AUTO_INCREMENT
-
-[警告] 金额使用FLOAT，精度丢失
-修复: TotalAmount DECIMAL(10,2)
-
-[警告] 时间使用TIMESTAMP，2038问题
-修复: CreateTime DATETIME
-
-[警告] 表名大写
-修复: orders
-
-[警告] 字段名驼峰命名
-修复: orderno, userid, totalamount
-
-[警告] 缺少三字段
-修复: 添加 create_time, update_time, is_deleted
-```
-
-**优化后：**
-```sql
-CREATE TABLE orders (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '订单ID',
-    order_no VARCHAR(50) NOT NULL COMMENT '订单号',
-    user_id BIGINT NOT NULL COMMENT '用户ID',
-    total_amount DECIMAL(10,2) NOT NULL COMMENT '总金额',
-    status TINYINT NOT NULL DEFAULT 0 COMMENT '状态：0-待支付，1-已支付',
-    create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-    is_deleted TINYINT(1) NOT NULL DEFAULT 0 COMMENT '逻辑删除：0-未删除，1-已删除',
-
-    UNIQUE KEY uk_order_no (order_no),
-    KEY idx_user_id (user_id),
-    KEY idx_create_time (create_time)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='订单表';
-```
-
-### 示例 3：安全审查
-
-**问题代码：**
-```xml
-<select id="findByKeyword" resultType="Product">
-    SELECT * FROM products WHERE name LIKE '${keyword}%'
-</select>
-```
-
-**审查结果：**
-```
-[严重] SQL注入风险
-文件: ProductMapper.xml:2
-问题: 使用${}拼接用户输入
-修复: 使用#{}参数化，或使用LIKE CONCAT
-```
-
-**修复后：**
-```xml
-<select id="findByKeyword" resultType="Product">
-    SELECT id, name, price, stock
-    FROM products
-    WHERE name LIKE CONCAT(#{keyword}, '%')
-</select>
+Grep: [A-Z]{2,}
+Glob: **/db/**/*.sql
+Output: content
 ```
 
 ## 数据类型规范
@@ -368,9 +253,8 @@ is_deleted TINYINT(1) NOT NULL DEFAULT 0 COMMENT '逻辑删除：0-未删除，1
 2. **联合索引**：等值列在前，范围列在后
 3. **最左前缀**：(a, b, c) 支持 a、ab、abc，不支持 b、c、bc
 4. **覆盖索引**：将查询列加入索引避免回表
-5. **前缀索引**：长字符串使用前缀索引 `VARCHAR(100)` 优于 `TEXT`
-6. **选择性原则**：区分度高的列优先建立索引
-7. **索引数量**：单表索引不超过 5 个
+5. **选择性原则**：区分度高的列优先建立索引
+6. **索引数量**：单表索引不超过 5 个
 
 ## 阿里巴巴规范摘要
 
@@ -382,141 +266,209 @@ is_deleted TINYINT(1) NOT NULL DEFAULT 0 COMMENT '逻辑删除：0-未删除，1
 - 【强制】WHERE/JOIN 列必须有索引
 - 【强制】禁止 SELECT *
 - 【强制】禁止使用 ${} 拼接用户输入
-- 【强制】表必须包含三字段（create_time、update_time、is_deleted）
+- 【强制】表必须包含三字段
 - 【推荐】单表行数超 1000 万考虑分表
 - 【推荐】单表字段数控制在 20 以内
-- 【推荐】字符字段使用 VARCHAR 时指定长度
-- 【推荐】表名建议添加业务前缀（如 tb_）
-
-## 安全检查
-
-| 风险 | 检测 | 修复 |
-|------|------|------|
-| SQL注入 | `${variable}` | 使用 `#{variable}` |
-| 硬编码密码 | `password: "xxx"` | `password: ${DB_PASSWORD}` |
-| 敏感日志 | `log.info(password)` | 脱敏处理 |
-| 明文存储 | `password` 未加密 | BCrypt 哈希 |
 
 ## 反模式警示
 
 ### 查询反模式
-- ❌ SELECT *
-- ❌ WHERE/JOIN 列无索引
-- ❌ 大表 OFFSET 分页（用游标分页）
-- ❌ N+1 查询（用 IN 或 JOIN）
-- ❌ ${} 拼接（用 #{}）
-- ❌ LIKE '%xxx'（前缀通配符无法使用索引）
+- ❌ SELECT * → 查询所有字段
+- ❌ WHERE/JOIN 列无索引 → 全表扫描
+- ❌ 大表 OFFSET 分页 → 用游标分页
+- ❌ N+1 查询 → 用 IN 或 JOIN
+- ❌ ${} 拼接 → 用 #{}
+- ❌ LIKE '%xxx' → 前缀通配符无法使用索引
 
 ### 表结构反模式
-- ❌ ID 用 INT（21亿上限）
-- ❌ 金额用 FLOAT（精度丢失）
-- ❌ 时间用 TIMESTAMP（2038问题）
-- ❌ 混合大小写（需要引号）
-- ❌ 缺少三字段
-- ❌ 大字段（TEXT/BLOB）过多
+- ❌ ID 用 INT → 21亿上限
+- ❌ 金额用 FLOAT → 精度丢失
+- ❌ 时间用 TIMESTAMP → 2038问题
+- ❌ 混合大小写 → 需要引号
+- ❌ 缺少三字段 → 审计缺失
+- ❌ 大字段过多 → TEXT/BLOB
 
-### 安全反模式
-- ❌ ${} 拼接用户输入
-- ❌ 明文存储密码
-- ❌ 日志输出敏感信息
-- ❌ 应用权限过大
+## 审查结论判定流程
+
+```
+开始审查
+    │
+    ▼
+存在严重问题？
+    ├─ 是 → ❌ 驳回（分数 < 60）
+    └─ 否 ↓
+    ▼
+计算分数 = 100 - (警告数 × 5) - (建议数 × 1)
+    │
+    ▼
+分数 < 60？
+    ├─ 是 → ❌ 驳回
+    └─ 否 ↓
+    ▼
+分数 60-74 且警告 > 5？
+    ├─ 是 → ⚠️ 有条件通过
+    └─ 否 ↓
+    ▼
+分数 ≥ 75？
+    ├─ 是 → ✅ 通过
+    └─ 否 → ⚠️ 有条件通过
+```
 
 ## 审查报告模板
 
 ```markdown
 # MySQL 审查报告
 
-**审查时间：** YYYY-MM-DD HH:mm
+**审查时间：** YYYY-MM-DD HH:mm:ss
 **审查范围：** src/main/resources/mapper/
 **文件数量：** N
+**SQL 文件数：** N
 
-## 问题汇总
+## 审查结果
 
-| 严重性 | 数量 |
-|--------|------|
-| 🔴 严重 | N |
-| 🟡 高优先级 | N |
-| 🔵 中优先级 | N |
+| 指标 | 值 |
+|------|-----|
+| 审查分数 | **70/100** |
+| 严重问题 | 1 个 (-20 分) |
+| 警告问题 | 4 个 (-20 分) |
+| 建议问题 | 10 个 (-10 分) |
 
-## 严重问题（必须修复）
+## 审查结论
 
-### 1. WHERE列缺少索引
-**文件：** UserMapper.xml:15
-**问题：** status列无索引，全表扫描
-**影响：** 查询性能差，随着数据增长会越来越慢
-**修复：**
-```sql
-CREATE INDEX idx_status ON users(status);
+⚠️ **有条件通过** - 存在 1 个严重问题需修复后部署
+
+---
+
+## 问题清单
+
+### 🔴 严重问题（1 个，-20 分）
+
+#### 1. WHERE列缺少索引
+```
+[严重] WHERE列缺少索引
+文件: src/main/resources/mapper/UserMapper.xml:15
+规则: WHERE status = #{status} 的 status 列无索引，导致全表扫描
+影响: 查询性能差，随着数据增长会越来越慢
+修复: CREATE INDEX idx_status ON users(status);
 ```
 
-### 2. SELECT * 使用
-**文件：** OrderMapper.xml:23
-**问题：** 查询所有字段，增加网络传输和内存占用
-**修复：**
-```xml
-SELECT id, order_no, user_id, total_amount, status
-FROM orders
-WHERE user_id = #{userId}
+### 🟡 警告问题（4 个，-20 分）
+
+#### 1. 数据类型不当
+```
+[警告] ID使用INT，21亿上限不足
+文件: src/main/resources/db/migration/V2__create_orders.sql:10
+规则: 主键应使用 BIGINT 而非 INT
+影响: 21 亿上限，高并发场景可能溢出
+修复: ALTER TABLE orders MODIFY COLUMN id BIGINT;
 ```
 
-## 高优先级问题
-
-### 1. 数据类型不当
-**文件：** V2__create_orders.sql:10
-**问题：** id使用INT，21亿上限不足
-**修复：**
-```sql
-ALTER TABLE orders MODIFY COLUMN id BIGINT;
+#### 2. 金额使用FLOAT
+```
+[警告] 金额使用FLOAT，精度丢失
+文件: src/main/resources/db/migration/V1__init.sql:25
+规则: 金额字段必须使用 DECIMAL 类型
+影响: 浮点运算精度丢失，可能导致财务计算错误
+修复: ALTER TABLE orders MODIFY COLUMN total_amount DECIMAL(10,2);
 ```
 
-## 建议
-
-### 1. 添加唯一索引
-**文件：** UserMapper.xml
-**建议：** email 字段应添加唯一索引
-**修复：**
-```sql
-ALTER TABLE users ADD UNIQUE INDEX uk_email (email);
+#### 3. 缺少三字段
 ```
+[警告] 表缺少三字段
+文件: src/main/resources/db/migration/V3__create_products.sql:15
+规则: 每个表必须包含 create_time、update_time、is_deleted
+影响: 缺少审计字段，无法追踪数据变更
+修复: ALTER TABLE products ADD COLUMN create_time DATETIME..., ADD COLUMN update_time..., ADD COLUMN is_deleted...;
+```
+
+#### 4. 命名不规范
+```
+[警告] 表名使用大写
+文件: src/main/resources/db/migration/V1__init.sql:10
+规则: 表名、字段名必须使用小写+下划线
+影响: Linux 区分大小写，可能导致部署问题
+修复: 重命名为小写+下划线格式
+```
+
+### 🔵 建议问题（10 个，-10 分）
+
+#### 1. 缺少字段注释
+```
+[建议] 缺少字段注释
+文件: src/main/resources/mapper/UserMapper.xml
+规则: 为所有字段添加 COMMENT 提高可维护性
+修复: 在 CREATE TABLE 语句中为每个字段添加 COMMENT
+```
+
+（省略其他建议...）
+
+---
 
 ## 修复 SQL 语句
 
 ```sql
--- 创建索引
+-- ===== 严重问题修复 =====
+-- 创建缺失的索引
 CREATE INDEX idx_status ON users(status);
 CREATE INDEX idx_user_id ON orders(user_id);
-CREATE UNIQUE INDEX uk_email ON users(email);
 
+-- ===== 警告问题修复 =====
 -- 修改数据类型
 ALTER TABLE orders MODIFY COLUMN id BIGINT;
 ALTER TABLE orders MODIFY COLUMN total_amount DECIMAL(10,2);
 ALTER TABLE orders MODIFY COLUMN create_time DATETIME;
+ALTER TABLE orders MODIFY COLUMN update_time DATETIME;
 
 -- 添加三字段
 ALTER TABLE orders
-ADD COLUMN create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
-ADD COLUMN update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-ADD COLUMN is_deleted TINYINT(1) DEFAULT 0;
+ADD COLUMN create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+ADD COLUMN update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+ADD COLUMN is_deleted TINYINT(1) NOT NULL DEFAULT 0 COMMENT '逻辑删除：0-未删除，1-已删除';
+
+-- ===== 建议问题修复 =====
+-- 添加唯一索引
+ALTER TABLE users ADD UNIQUE INDEX uk_email (email);
+
+-- 添加字段注释
+ALTER TABLE users MODIFY COLUMN username VARCHAR(50) COMMENT '用户名';
+
+-- 添加表注释
+ALTER TABLE users COMMENT '用户表';
 ```
 
-## 验证结果
+## 修复优先级
 
-- [ ] 所有索引已创建
-- [ ] EXPLAIN 验证查询使用索引
-- [ ] 数据类型已修改
-- [ ] 三字段已添加
+1. **立即修复**（阻塞部署）：WHERE列缺少索引
+2. **强烈建议**（影响数据完整性）：数据类型、三字段
+3. **可选改进**（代码质量）：注释、命名
 
-## 审查结论
+## 下一步行动
 
-⚠️ **条件通过** - 存在 2 个严重问题需修复后部署
-
-## 优先级修复顺序
-
-1. 创建索引（严重）
-2. 修复 SQL 注入（严重）
-3. 修改数据类型（高优先级）
-4. 添加字段注释（中优先级）
+- [ ] 创建缺失索引
+- [ ] 修改数据类型
+- [ ] 添加三字段
+- [ ] （可选）添加字段注释
+- [ ] 运行 EXPLAIN 验证索引使用
 ```
+
+## 快速检查清单
+
+审查前确认：
+- [ ] 已识别所有 SQL 文件
+- [ ] 已设置正确的严重性级别
+- [ ] 已配置数据库连接（如需 EXPLAIN）
+
+审查时检查：
+- [ ] 性能问题已标记为严重
+- [ ] 结构问题已标记为警告
+- [ ] 风格问题已标记为建议
+- [ ] 每个问题都有 SQL 修复方案
+
+审查后验证：
+- [ ] 分数计算正确
+- [ ] 结论与分数一致
+- [ ] 修复 SQL 可执行
+- [ ] 索引创建顺序正确（外键先于主表索引）
 
 ## 批准变更前检查清单
 
@@ -536,21 +488,19 @@ ADD COLUMN is_deleted TINYINT(1) DEFAULT 0;
 
 | Agent | 协作场景 | 交接方式 |
 |-------|----------|----------|
-| java-reviewer | MyBatis Mapper 共同审查 | 确保代码和数据库设计一致 |
-| security-reviewer | SQL 注入检查 | 共同审查安全风险 |
+| java-reviewer | MyBatis Mapper 共同审查 | 确保 Java 代码和 SQL 设计一致 |
+| security-reviewer | SQL 注入深度检查 | 转交进行 OWASP 深度审查 |
 | build-error-resolver | Mapper 配置错误 | 解决 MyBatis 绑定问题 |
 | architect | 数据库架构设计 | 参与表结构设计评审 |
 
-## 常见问题速查表
-
-| 问题 | 检测 | 修复 |
-|------|------|------|
-| 全表扫描 | EXPLAIN type=ALL | 添加索引 |
-| SQL注入 | `\${变量}` | 使用 `#{变量}` |
-| 精度丢失 | FLOAT金额 | 改用DECIMAL |
-| 2038问题 | TIMESTAMP | 改用DATETIME |
-| ID溢出 | INT主键 | 改用BIGINT |
-| 命名问题 | 大写/驼峰 | 改用小写+下划线 |
+**协作示例：**
+```
+mysql-reviewer 发现问题 → 问题分类 → 超出范围则转交对应专家
+                           ↓
+                       SQL 注入基础  → mysql-reviewer 直接修复
+                       SQL 注入深度  → security-reviewer 深度审查
+                       架构设计问题 → architect 设计评审
+```
 
 ---
 
