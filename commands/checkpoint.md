@@ -1,74 +1,74 @@
-# Checkpoint Command
+# Checkpoint 指令
 
-Create or verify a checkpoint in your workflow.
+在您的工作流程中建立或验证检查点。
 
-## Usage
+## 使用方式
 
 `/checkpoint [create|verify|list] [name]`
 
-## Create Checkpoint
+## 建立检查点
 
-When creating a checkpoint:
+建立检查点时：
 
-1. Run `/verify quick` to ensure current state is clean
-2. Create a git stash or commit with checkpoint name
-3. Log checkpoint to `.claude/checkpoints.log`:
+1. 执行 `/verify quick` 确保目前状态是干净的
+2. 使用检查点名称建立 git stash 或 commit
+3. 将检查点记录到 `.claude/checkpoints.log`：
 
 ```bash
 echo "$(date +%Y-%m-%d-%H:%M) | $CHECKPOINT_NAME | $(git rev-parse --short HEAD)" >> .claude/checkpoints.log
 ```
 
-4. Report checkpoint created
+4. 报告检查点已建立
 
-## Verify Checkpoint
+## 验证检查点
 
-When verifying against a checkpoint:
+针对检查点进行验证时：
 
-1. Read checkpoint from log
-2. Compare current state to checkpoint:
-   - Files added since checkpoint
-   - Files modified since checkpoint
-   - Test pass rate now vs then
-   - Coverage now vs then
+1. 从日志读取检查点
+2. 比较目前状态与检查点：
+   - 排查点后新增的文件
+   - 排查点后修改的文件
+   - 现在 vs 当时的测试通过率
+   - 现在 vs 当时的覆盖率
 
-3. Report:
+3. 报告：
 ```
-CHECKPOINT COMPARISON: $NAME
+检查点比较：$NAME
 ============================
-Files changed: X
-Tests: +Y passed / -Z failed
-Coverage: +X% / -Y%
-Build: [PASS/FAIL]
+变更文件：X
+测试：+Y 通过 / -Z 失败
+覆盖率：+X% / -Y%
+构建：[通过/失败]
 ```
 
-## List Checkpoints
+## 列出检查点
 
-Show all checkpoints with:
-- Name
-- Timestamp
+显示所有检查点，包含：
+- 名称
+- 时间戳
 - Git SHA
-- Status (current, behind, ahead)
+- 状态（当前、落后、领先）
 
-## Workflow
+## 工作流程
 
-Typical checkpoint flow:
+典型的检查点流程：
 
 ```
-[Start] --> /checkpoint create "feature-start"
+[开始] --> /checkpoint create "feature-start"
    |
-[Implement] --> /checkpoint create "core-done"
+[实施] --> /checkpoint create "core-done"
    |
-[Test] --> /checkpoint verify "core-done"
+[测试] --> /checkpoint verify "core-done"
    |
-[Refactor] --> /checkpoint create "refactor-done"
+[重构] --> /checkpoint create "refactor-done"
    |
 [PR] --> /checkpoint verify "feature-start"
 ```
 
-## Arguments
+## 参数
 
 $ARGUMENTS:
-- `create <name>` - Create named checkpoint
-- `verify <name>` - Verify against named checkpoint
-- `list` - Show all checkpoints
-- `clear` - Remove old checkpoints (keeps last 5)
+- `create <name>` - 建立命名检查点
+- `verify <name>` - 针对命名检查点验证
+- `list` - 显示所有检查点
+- `clear` - 移除旧检查点（保留最后 5 个）

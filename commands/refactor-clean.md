@@ -1,28 +1,75 @@
-# Refactor Clean
+# 重构清理
 
-Safely identify and remove dead code with test verification:
+通过测试验证安全地识别和移除无用代码：
 
-1. Run dead code analysis tools:
-   - knip: Find unused exports and files
-   - depcheck: Find unused dependencies
-   - ts-prune: Find unused TypeScript exports
+1. 执行无用代码分析工具：
+   - **Deadclass**：找出未使用的类和方法
+   - **UCDetector**：Eclipse/Java 死代码检测
+   - **Coverage-based**：基于 JaCoCo 报告找出未覆盖代码
 
-2. Generate comprehensive report in .reports/dead-code-analysis.md
+2. 在 `.reports/dead-code-analysis.md` 生成完整报告
 
-3. Categorize findings by severity:
-   - SAFE: Test files, unused utilities
-   - CAUTION: API routes, components
-   - DANGER: Config files, main entry points
+3. 按风险分类发现：
+   - **安全**：测试类、废弃的工具类
+   - **注意**：Controller、Service、Mapper
+   - **危险**：配置类、主入口类、被反射调用的类
 
-4. Propose safe deletions only
+4. 只建议安全的删除
 
-5. Before each deletion:
-   - Run full test suite
-   - Verify tests pass
-   - Apply change
-   - Re-run tests
-   - Rollback if tests fail
+5. 每次删除前：
+   - 执行完整测试套件
+   - 验证测试通过
+   - 应用更改
+   - 重新执行测试
+   - 如果测试失败则回滚
 
-6. Show summary of cleaned items
+6. 显示已清理项目的摘要
 
-Never delete code without running tests first!
+## 无用代码检测工具
+
+```bash
+# Maven 清理检查
+mvn clean dependency:analyze
+
+# 查找未使用的依赖
+mvn dependency:analyze
+
+# UCDetector（需要额外配置）
+java -jar ucdetector.jar -p com.example:my-project
+
+# 基于覆盖率查找未使用代码
+mvn test jacoco:report
+# 查看报告，找出 0% 覆盖的代码
+```
+
+## 常见可清理的项目
+
+| 类型 | 说明 | 风险 |
+|------|------|------|
+| 未使用的 import | 无效导入语句 | 低 |
+| 未使用的私有方法 | 类内私有但未被调用 | 低 |
+| 未使用的私有字段 | 类内私有但未被引用 | 低 |
+| 未使用的类 | 整个类未被引用 | 中 |
+| 未使用的依赖 | pom.xml 中声明但未使用 | 中 |
+| 废弃的方法 | 标注 @Deprecated 的方法 | 中 |
+| 整个废弃模块 | 功能已被替代 | 高 |
+
+## 清理顺序建议
+
+1. 先清理未使用的 import（安全）
+2. 再清理未使用的私有方法和字段（相对安全）
+3. 然后清理未使用的类（需要仔细检查）
+4. 最后清理未使用的依赖（需要测试验证）
+
+## 自动清理
+
+```bash
+# Java 自动格式化和优化
+mvn fmt:format
+
+# 使用 IDE 的自动优化功能
+# IntelliJ: Code -> Optimize Imports
+# Eclipse: Source -> Organize Imports
+```
+
+在执行测试前绝不删除代码！

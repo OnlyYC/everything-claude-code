@@ -3,407 +3,830 @@ name: tdd-workflow
 description: Use this skill when writing new features, fixing bugs, or refactoring code. Enforces test-driven development with 80%+ coverage including unit, integration, and E2E tests.
 ---
 
-# Test-Driven Development Workflow
+# 测试驱动开发工作流程
 
-This skill ensures all code development follows TDD principles with comprehensive test coverage.
+此技能确保所有代码开发遵循 TDD 原则，并具有完整的测试覆盖率。
 
-## When to Activate
+## 技术栈
 
-- Writing new features or functionality
-- Fixing bugs or issues
-- Refactoring existing code
-- Adding API endpoints
-- Creating new components
+- **Java 21** - 使用现代 Java 特性（Record、Pattern Matching、Virtual Threads 等）
+- **Spring Boot 3.2+** - 最新 Spring Boot 框架
+- **Spring MVC** - Web 层
+- **MyBatis 3 + MyBatis-Plus** - 持久层
+- **Maven** - 构建工具
+- **MySQL** - 数据库
+- **JUnit 5** - 测试框架
+- **Mockito** - Mock 框架
+- **Spring Boot Test** - 集成测试支持
+- **Testcontainers** - 容器化测试
+- **RestAssured** - REST API 测试
 
-## Core Principles
+## 何时启用
 
-### 1. Tests BEFORE Code
-ALWAYS write tests first, then implement code to make tests pass.
+- 编写新功能或功能性代码
+- 修复 Bug 或问题
+- 重构现有代码
+- 新增 REST API 端点
+- 创建新 Service 或 Repository
 
-### 2. Coverage Requirements
-- Minimum 80% coverage (unit + integration + E2E)
-- All edge cases covered
-- Error scenarios tested
-- Boundary conditions verified
+## 核心原则
 
-### 3. Test Types
+### 1. 测试先于代码
+总是先写测试，然后实现代码使测试通过。
 
-#### Unit Tests
-- Individual functions and utilities
-- Component logic
-- Pure functions
-- Helpers and utilities
+### 2. 覆盖率要求
+- 最低 80% 覆盖率（单元 + 集成）
+- 涵盖所有边界案例
+- 测试错误场景
+- 验证边界条件
 
-#### Integration Tests
-- API endpoints
-- Database operations
-- Service interactions
-- External API calls
+### 3. 测试类型
 
-#### E2E Tests (Playwright)
-- Critical user flows
-- Complete workflows
-- Browser automation
-- UI interactions
+#### 单元测试
+- Service 层业务逻辑
+- 纯函数和工具类
+- 辅助方法和工具
+- 使用 Mockito 隔离依赖
 
-## TDD Workflow Steps
+#### 集成测试
+- REST API 端点（@WebMvcTest / @SpringBootTest）
+- 数据库操作（MyBatis Mapper）
+- Service 与 Repository 交互
+- 事务处理
+- 使用 Testcontainers 进行真实数据库测试
 
-### Step 1: Write User Journeys
+## TDD 工作流程步骤
+
+### 步骤 1：编写用户旅程
 ```
-As a [role], I want to [action], so that [benefit]
+身为 [角色]，我想要 [动作]，以便 [好处]
 
-Example:
-As a user, I want to search for markets semantically,
-so that I can find relevant markets even without exact keywords.
-```
-
-### Step 2: Generate Test Cases
-For each user journey, create comprehensive test cases:
-
-```typescript
-describe('Semantic Search', () => {
-  it('returns relevant markets for query', async () => {
-    // Test implementation
-  })
-
-  it('handles empty query gracefully', async () => {
-    // Test edge case
-  })
-
-  it('falls back to substring search when Redis unavailable', async () => {
-    // Test fallback behavior
-  })
-
-  it('sorts results by similarity score', async () => {
-    // Test sorting logic
-  })
-})
+示例：
+身为用户，我想要搜索产品，
+以便即使没有精确关键字也能找到相关产品。
 ```
 
-### Step 3: Run Tests (They Should Fail)
-```bash
-npm test
-# Tests should fail - we haven't implemented yet
-```
+### 步骤 2：生成测试案例
+为每个用户旅程建立完整的测试案例：
 
-### Step 4: Implement Code
-Write minimal code to make tests pass:
+```java
+@DisplayName("产品搜索服务测试")
+class ProductServiceTest {
 
-```typescript
-// Implementation guided by tests
-export async function searchMarkets(query: string) {
-  // Implementation here
+    @Test
+    @DisplayName("根据关键词返回相关产品")
+    void shouldReturnProductsForQuery() {
+        // 测试实现
+    }
+
+    @Test
+    @DisplayName("空查询时优雅处理")
+    void shouldHandleEmptyQueryGracefully() {
+        // 测试边界案例
+    }
+
+    @Test
+    @DisplayName("数据库不可用时降级到缓存搜索")
+    void shouldFallbackToCacheWhenDatabaseUnavailable() {
+        // 测试降级行为
+    }
+
+    @Test
+    @DisplayName("按相关性分数排序结果")
+    void shouldSortResultsByRelevanceScore() {
+        // 测试排序逻辑
+    }
 }
 ```
 
-### Step 5: Run Tests Again
+### 步骤 3：执行测试（应该失败）
 ```bash
-npm test
-# Tests should now pass
+mvn test
+# 测试应该失败 - 我们还没实现
 ```
 
-### Step 6: Refactor
-Improve code quality while keeping tests green:
-- Remove duplication
-- Improve naming
-- Optimize performance
-- Enhance readability
+### 步骤 4：实现代码
+编写最少的代码使测试通过：
 
-### Step 7: Verify Coverage
+```java
+@Service
+@RequiredArgsConstructor
+public class ProductService {
+    private final ProductMapper productMapper;
+
+    public List<ProductDTO> searchProducts(String query) {
+        // 实现在此
+    }
+}
+```
+
+### 步骤 5：再次执行测试
 ```bash
-npm run test:coverage
-# Verify 80%+ coverage achieved
+mvn test
+# 测试现在应该通过
 ```
 
-## Testing Patterns
+### 步骤 6：重构
+在保持测试通过的同时改善代码质量：
+- 移除重复
+- 改善命名
+- 优化性能
+- 增强可读性
 
-### Unit Test Pattern (Jest/Vitest)
-```typescript
-import { render, screen, fireEvent } from '@testing-library/react'
-import { Button } from './Button'
-
-describe('Button Component', () => {
-  it('renders with correct text', () => {
-    render(<Button>Click me</Button>)
-    expect(screen.getByText('Click me')).toBeInTheDocument()
-  })
-
-  it('calls onClick when clicked', () => {
-    const handleClick = jest.fn()
-    render(<Button onClick={handleClick}>Click</Button>)
-
-    fireEvent.click(screen.getByRole('button'))
-
-    expect(handleClick).toHaveBeenCalledTimes(1)
-  })
-
-  it('is disabled when disabled prop is true', () => {
-    render(<Button disabled>Click</Button>)
-    expect(screen.getByRole('button')).toBeDisabled()
-  })
-})
+### 步骤 7：验证覆盖率
+```bash
+mvn clean test jacoco:report
+# 验证达到 80%+ 覆盖率
 ```
 
-### API Integration Test Pattern
-```typescript
-import { NextRequest } from 'next/server'
-import { GET } from './route'
+## 测试模式
 
-describe('GET /api/markets', () => {
-  it('returns markets successfully', async () => {
-    const request = new NextRequest('http://localhost/api/markets')
-    const response = await GET(request)
-    const data = await response.json()
+### 单元测试模式（JUnit 5 + Mockito）
 
-    expect(response.status).toBe(200)
-    expect(data.success).toBe(true)
-    expect(Array.isArray(data.data)).toBe(true)
-  })
+```java
+@ExtendWith(MockitoExtension.class)
+@DisplayName("用户服务单元测试")
+class UserServiceTest {
 
-  it('validates query parameters', async () => {
-    const request = new NextRequest('http://localhost/api/markets?limit=invalid')
-    const response = await GET(request)
+    @Mock
+    private UserMapper userMapper;
 
-    expect(response.status).toBe(400)
-  })
+    @Mock
+    private PasswordEncoder passwordEncoder;
 
-  it('handles database errors gracefully', async () => {
-    // Mock database failure
-    const request = new NextRequest('http://localhost/api/markets')
-    // Test error handling
-  })
-})
+    @InjectMocks
+    private UserService userService;
+
+    @Test
+    @DisplayName("创建用户时成功加密密码")
+    void shouldEncryptPasswordWhenCreatingUser() {
+        // Arrange
+        String rawPassword = "password123";
+        String encodedPassword = "$2a$10$encoded...";
+        UserCreateRequest request = new UserCreateRequest(
+            "test@example.com",
+            rawPassword,
+            "Test User"
+        );
+
+        when(passwordEncoder.encode(rawPassword)).thenReturn(encodedPassword);
+        when(userMapper.insert(any(User.class))).thenReturn(1);
+
+        // Act
+        Long userId = userService.createUser(request);
+
+        // Assert
+        assertThat(userId).isNotNull();
+        verify(passwordEncoder).encode(rawPassword);
+        verify(userMapper).insert(argThat(user ->
+            user.getPassword().equals(encodedPassword) &&
+            user.getEmail().equals("test@example.com")
+        ));
+    }
+
+    @Test
+    @DisplayName("邮箱已存在时抛出异常")
+    void shouldThrowExceptionWhenEmailExists() {
+        // Arrange
+        UserCreateRequest request = new UserCreateRequest(
+            "existing@example.com",
+            "password123",
+            "Test User"
+        );
+        when(userMapper.existsByEmail("existing@example.com")).thenReturn(true);
+
+        // Act & Assert
+        assertThatThrownBy(() -> userService.createUser(request))
+            .isInstanceOf(DuplicateEmailException.class)
+            .hasMessageContaining("Email already exists");
+    }
+
+    @Nested
+    @DisplayName("密码验证相关测试")
+    class PasswordValidationTests {
+
+        @ParameterizedTest
+        @ValueSource(strings = {"", "  ", "123456"})
+        @DisplayName("无效密码时抛出异常")
+        void shouldThrowExceptionForInvalidPassword(String invalidPassword) {
+            UserCreateRequest request = new UserCreateRequest(
+                "test@example.com",
+                invalidPassword,
+                "Test User"
+            );
+
+            assertThatThrownBy(() -> userService.createUser(request))
+                .isInstanceOf(InvalidPasswordException.class);
+        }
+    }
+}
 ```
 
-### E2E Test Pattern (Playwright)
-```typescript
-import { test, expect } from '@playwright/test'
+### Service 层集成测试模式
 
-test('user can search and filter markets', async ({ page }) => {
-  // Navigate to markets page
-  await page.goto('/')
-  await page.click('a[href="/markets"]')
+```java
+@DataJpaTest
+@Import({UserService.class, PasswordEncoderConfig.class})
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
+@Testcontainers
+@DisplayName("用户服务集成测试")
+class UserServiceIntegrationTest {
 
-  // Verify page loaded
-  await expect(page.locator('h1')).toContainText('Markets')
+    @Container
+    static MySQLContainer<?> mysql = new MySQLContainer<>(
+        "mysql:8.0"
+    );
 
-  // Search for markets
-  await page.fill('input[placeholder="Search markets"]', 'election')
+    @DynamicPropertySource
+    static void configureProperties(DynamicPropertyRegistry registry) {
+        registry.add("spring.datasource.url", mysql::getJdbcUrl);
+        registry.add("spring.datasource.username", mysql::getUsername);
+        registry.add("spring.datasource.password", mysql::getPassword);
+    }
 
-  // Wait for debounce and results
-  await page.waitForTimeout(600)
+    @Autowired
+    private UserService userService;
 
-  // Verify search results displayed
-  const results = page.locator('[data-testid="market-card"]')
-  await expect(results).toHaveCount(5, { timeout: 5000 })
+    @Autowired
+    private UserMapper userMapper;
 
-  // Verify results contain search term
-  const firstResult = results.first()
-  await expect(firstResult).toContainText('election', { ignoreCase: true })
+    @Test
+    @DisplayName("完整用户创建流程")
+    void shouldCreateUserSuccessfully() {
+        // Arrange
+        UserCreateRequest request = new UserCreateRequest(
+            "integration@example.com",
+            "SecurePassword123!",
+            "Integration Test"
+        );
 
-  // Filter by status
-  await page.click('button:has-text("Active")')
+        // Act
+        Long userId = userService.createUser(request);
 
-  // Verify filtered results
-  await expect(results).toHaveCount(3)
-})
+        // Assert
+        assertThat(userId).isNotNull();
+        User user = userMapper.selectById(userId);
+        assertThat(user).isNotNull();
+        assertThat(user.getEmail()).isEqualTo("integration@example.com");
+    }
 
-test('user can create a new market', async ({ page }) => {
-  // Login first
-  await page.goto('/creator-dashboard')
-
-  // Fill market creation form
-  await page.fill('input[name="name"]', 'Test Market')
-  await page.fill('textarea[name="description"]', 'Test description')
-  await page.fill('input[name="endDate"]', '2025-12-31')
-
-  // Submit form
-  await page.click('button[type="submit"]')
-
-  // Verify success message
-  await expect(page.locator('text=Market created successfully')).toBeVisible()
-
-  // Verify redirect to market page
-  await expect(page).toHaveURL(/\/markets\/test-market/)
-})
+    @Test
+    @Transactional
+    @DisplayName("事务回滚测试")
+    void shouldRollbackOnError() {
+        // 测试事务回滚逻辑
+    }
+}
 ```
 
-## Test File Organization
+### REST API 集成测试模式
+
+```java
+@WebMvcTest(ProductController.class)
+@Import({ProductService.class, ProductMapper.class})
+@DisplayName("产品 API 集成测试")
+class ProductControllerTest {
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @MockBean
+    private ProductService productService;
+
+    @Test
+    @DisplayName("GET /api/products - 成功返回产品列表")
+    void shouldReturnProducts() throws Exception {
+        // Arrange
+        List<ProductDTO> products = List.of(
+            new ProductDTO(1L, "Product A", 100.0),
+            new ProductDTO(2L, "Product B", 200.0)
+        );
+        when(productService.getProducts(any())).thenReturn(products);
+
+        // Act & Assert
+        mockMvc.perform(get("/api/products")
+                .param("page", "0")
+                .param("size", "10")
+                .contentType(MediaType.APPLICATION_JSON))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.data").isArray())
+            .andExpect(jsonPath("$.data", hasSize(2)))
+            .andExpect(jsonPath("$.data[0].name").value("Product A"));
+    }
+
+    @Test
+    @DisplayName("POST /api/products - 创建新产品")
+    void shouldCreateProduct() throws Exception {
+        // Arrange
+        String requestBody = """
+            {
+                "name": "New Product",
+                "price": 299.99,
+                "description": "Product description"
+            }
+            """;
+
+        when(productService.createProduct(any())).thenReturn(1L);
+
+        // Act & Assert
+        mockMvc.perform(post("/api/products")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(requestBody))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.data").value(1));
+    }
+
+    @Test
+    @DisplayName("无效请求参数返回 400")
+    void shouldReturn400ForInvalidRequest() throws Exception {
+        String invalidBody = """
+            {
+                "name": "",
+                "price": -100
+            }
+            """;
+
+        mockMvc.perform(post("/api/products")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(invalidBody))
+            .andExpect(status().isBadRequest());
+    }
+}
+```
+
+### 完整集成测试（RestAssured）
+
+```java
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@Testcontainers
+@DisplayName("产品 API E2E 测试")
+class ProductApiE2ETest {
+
+    @Container
+    static MySQLContainer<?> mysql = new MySQLContainer<>(
+        "mysql:8.0"
+    );
+
+    @LocalServerPort
+    private int port;
+
+    @DynamicPropertySource
+    static void configureProperties(DynamicPropertyRegistry registry) {
+        registry.add("spring.datasource.url", mysql::getJdbcUrl);
+        registry.add("spring.datasource.username", mysql::getUsername);
+        registry.add("spring.datasource.password", mysql::getPassword);
+    }
+
+    @BeforeEach
+    void setUp() {
+        RestAssured.port = port;
+        RestAssured.basePath = "/api";
+    }
+
+    @Test
+    @DisplayName("用户可以搜索和筛选产品")
+    void userCanSearchAndFilterProducts() {
+        // 创建测试数据
+        given()
+            .body("""
+                {
+                    "name": "Election Market",
+                    "price": 100.0,
+                    "category": "POLITICS"
+                }
+                """)
+            .contentType(ContentType.JSON)
+        .when()
+            .post("/products")
+        .then()
+            .statusCode(201);
+
+        // 搜索产品
+        ValidatableResponse response = given()
+            .queryParam("keyword", "election")
+        .when()
+            .get("/products/search")
+        .then()
+            .statusCode(200)
+            .body("success", is(true))
+            .body("data", hasSize(greaterThan(0)));
+
+        // 验证搜索结果
+        response.body("data[0].name", containsStringIgnoringCase("election"));
+
+        // 按类别筛选
+        given()
+            .queryParam("category", "POLITICS")
+        .when()
+            .get("/products")
+        .then()
+            .statusCode(200)
+            .body("data", everyItem(
+                hasEntry("category", "POLITICS")
+            ));
+    }
+}
+```
+
+## 测试文件组织
 
 ```
 src/
-├── components/
-│   ├── Button/
-│   │   ├── Button.tsx
-│   │   ├── Button.test.tsx          # Unit tests
-│   │   └── Button.stories.tsx       # Storybook
-│   └── MarketCard/
-│       ├── MarketCard.tsx
-│       └── MarketCard.test.tsx
-├── app/
-│   └── api/
-│       └── markets/
-│           ├── route.ts
-│           └── route.test.ts         # Integration tests
-└── e2e/
-    ├── markets.spec.ts               # E2E tests
-    ├── trading.spec.ts
-    └── auth.spec.ts
+├── main/
+│   ├── java/
+│   │   └── com/example/demo/
+│   │       ├── controller/
+│   │       │   └── ProductController.java
+│   │       ├── service/
+│   │       │   ├── ProductService.java
+│   │       │   └── impl/
+│   │       │       └── ProductServiceImpl.java
+│   │       ├── mapper/
+│   │       │   ├── ProductMapper.java
+│   │       │   └── ProductMapper.xml
+│   │       ├── entity/
+│   │       │   └── Product.java
+│   │       └── config/
+│   │           └── SecurityConfig.java
+│   └── resources/
+│       ├── application.yml
+│       ├── application-test.yml
+│       └── mapper/
+│           └── ProductMapper.xml
+└── test/
+    ├── java/
+    │   └── com/example/demo/
+    │       ├── controller/
+    │       │   └── ProductControllerTest.java      # API 集成测试
+    │       ├── service/
+    │       │   ├── ProductServiceTest.java          # 单元测试
+    │       │   └── ProductServiceIntegrationTest.java  # 集成测试
+    │       ├── mapper/
+    │       │   └── ProductMapperTest.java           # Mapper 测试
+    │       └── util/
+    │           └── PasswordUtilTest.java            # 工具类测试
+    └── resources/
+        ├── application-test.yml
+        └── test-data.sql
 ```
 
-## Mocking External Services
+## pom.xml 配置
 
-### Supabase Mock
-```typescript
-jest.mock('@/lib/supabase', () => ({
-  supabase: {
-    from: jest.fn(() => ({
-      select: jest.fn(() => ({
-        eq: jest.fn(() => Promise.resolve({
-          data: [{ id: 1, name: 'Test Market' }],
-          error: null
-        }))
-      }))
-    }))
-  }
-}))
+```xml
+<dependencies>
+    <!-- Spring Boot Starter -->
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+
+    <!-- MyBatis-Plus -->
+    <dependency>
+        <groupId>com.baomidou</groupId>
+        <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
+        <version>3.5.5</version>
+    </dependency>
+
+    <!-- MySQL Driver -->
+    <dependency>
+        <groupId>com.mysql</groupId>
+        <artifactId>mysql-connector-j</artifactId>
+        <scope>runtime</scope>
+    </dependency>
+
+    <!-- Test Dependencies -->
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-test</artifactId>
+        <scope>test</scope>
+    </dependency>
+
+    <!-- Testcontainers -->
+    <dependency>
+        <groupId>org.testcontainers</groupId>
+        <artifactId>testcontainers</artifactId>
+        <version>1.19.3</version>
+        <scope>test</scope>
+    </dependency>
+    <dependency>
+        <groupId>org.testcontainers</groupId>
+        <artifactId>mysql</artifactId>
+        <version>1.19.3</version>
+        <scope>test</scope>
+    </dependency>
+
+    <!-- RestAssured -->
+    <dependency>
+        <groupId>io.rest-assured</groupId>
+        <artifactId>rest-assured</artifactId>
+        <version>5.4.0</version>
+        <scope>test</scope>
+    </dependency>
+</dependencies>
+
+<build>
+    <plugins>
+        <plugin>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-maven-plugin</artifactId>
+        </plugin>
+        <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <version>3.2.2</version>
+        </plugin>
+        <plugin>
+            <groupId>org.jacoco</groupId>
+            <artifactId>jacoco-maven-plugin</artifactId>
+            <version>0.8.11</version>
+            <executions>
+                <execution>
+                    <goals>
+                        <goal>prepare-agent</goal>
+                    </goals>
+                </execution>
+                <execution>
+                    <id>report</id>
+                    <phase>test</phase>
+                    <goals>
+                        <goal>report</goal>
+                    </goals>
+                </execution>
+                <execution>
+                    <id>check</id>
+                    <goals>
+                        <goal>check</goal>
+                    </goals>
+                    <configuration>
+                        <rules>
+                            <rule>
+                                <element>CLASS</element>
+                                <limits>
+                                    <limit>
+                                        <counter>LINE</counter>
+                                        <value>COVEREDRATIO</value>
+                                        <minimum>0.80</minimum>
+                                    </limit>
+                                </limits>
+                            </rule>
+                        </rules>
+                    </configuration>
+                </execution>
+            </executions>
+        </plugin>
+    </plugins>
+</build>
 ```
 
-### Redis Mock
-```typescript
-jest.mock('@/lib/redis', () => ({
-  searchMarketsByVector: jest.fn(() => Promise.resolve([
-    { slug: 'test-market', similarity_score: 0.95 }
-  ])),
-  checkRedisHealth: jest.fn(() => Promise.resolve({ connected: true }))
-}))
-```
+## Mock 数据与测试工具类
 
-### OpenAI Mock
-```typescript
-jest.mock('@/lib/openai', () => ({
-  generateEmbedding: jest.fn(() => Promise.resolve(
-    new Array(1536).fill(0.1) // Mock 1536-dim embedding
-  ))
-}))
-```
+### Mapper Mock
 
-## Test Coverage Verification
+```java
+@ExtendWith(MockitoExtension.class)
+class ProductMapperTest {
 
-### Run Coverage Report
-```bash
-npm run test:coverage
-```
+    @Mock
+    private ProductMapper productMapper;
 
-### Coverage Thresholds
-```json
-{
-  "jest": {
-    "coverageThresholds": {
-      "global": {
-        "branches": 80,
-        "functions": 80,
-        "lines": 80,
-        "statements": 80
-      }
+    @Test
+    void shouldInsertProduct() {
+        Product product = new Product(null, "Test", 100.0);
+        when(productMapper.insert(any())).thenReturn(1);
+
+        int result = productMapper.insert(product);
+
+        assertThat(result).isEqualTo(1);
     }
-  }
 }
 ```
 
-## Common Testing Mistakes to Avoid
+### 测试数据构建器
 
-### ❌ WRONG: Testing Implementation Details
-```typescript
-// Don't test internal state
-expect(component.state.count).toBe(5)
+```java
+public class TestDataBuilder {
+
+    public static User.CreateRequest userCreateRequest() {
+        return new User.CreateRequest(
+            "test@example.com",
+            "SecurePassword123!",
+            "Test User"
+        );
+    }
+
+    public static User user() {
+        return User.builder()
+            .id(1L)
+            .email("test@example.com")
+            .password("$2a$10$encoded...")
+            .username("Test User")
+            .build();
+    }
+
+    public static Product product() {
+        return Product.builder()
+            .id(1L)
+            .name("Test Product")
+            .price(100.0)
+            .build();
+    }
+}
 ```
 
-### ✅ CORRECT: Test User-Visible Behavior
-```typescript
-// Test what users see
-expect(screen.getByText('Count: 5')).toBeInTheDocument()
+### 测试配置
+
+```java
+@TestConfiguration
+public class TestConfig {
+
+    @Bean
+    @Primary
+    public PasswordEncoder testPasswordEncoder() {
+        return new PasswordEncoder() {
+            @Override
+            public String encode(CharSequence rawPassword) {
+                return "$2a$10$encoded" + rawPassword;
+            }
+
+            @Override
+            public boolean matches(CharSequence rawPassword, String encodedPassword) {
+                return encodedPassword.contains(rawPassword);
+            }
+        };
+    }
+}
 ```
 
-### ❌ WRONG: Brittle Selectors
-```typescript
-// Breaks easily
-await page.click('.css-class-xyz')
-```
+## 测试覆盖率验证
 
-### ✅ CORRECT: Semantic Selectors
-```typescript
-// Resilient to changes
-await page.click('button:has-text("Submit")')
-await page.click('[data-testid="submit-button"]')
-```
-
-### ❌ WRONG: No Test Isolation
-```typescript
-// Tests depend on each other
-test('creates user', () => { /* ... */ })
-test('updates same user', () => { /* depends on previous test */ })
-```
-
-### ✅ CORRECT: Independent Tests
-```typescript
-// Each test sets up its own data
-test('creates user', () => {
-  const user = createTestUser()
-  // Test logic
-})
-
-test('updates user', () => {
-  const user = createTestUser()
-  // Update logic
-})
-```
-
-## Continuous Testing
-
-### Watch Mode During Development
+### 执行覆盖率报告
 ```bash
-npm test -- --watch
-# Tests run automatically on file changes
+mvn clean test jacoco:report
+```
+
+### JaCoCo 覆盖率门槛
+在 pom.xml 中已配置，最低 80% 覆盖率。
+
+## 常见测试错误避免
+
+### 错误：测试实现细节
+```java
+// 不要测试私有方法或内部状态
+// userService.doInternalCalculation(); // 不应该直接调用
+```
+
+### 正确：测试公开行为
+```java
+// 测试公开接口的行为
+UserDTO result = userService.getUserById(1L);
+assertThat(result.getName()).isEqualTo("Expected Name");
+```
+
+### 错误：脆弱的测试数据
+```java
+// 依赖数据库中特定数据
+User user = userMapper.selectById(1L);
+```
+
+### 正确：测试隔离
+```java
+// 每个测试创建自己的数据
+User user = User.builder()
+    .email("test@example.com")
+    .username("Test")
+    .build();
+userMapper.insert(user);
+```
+
+### 错误：无事务清理
+```java
+@Test
+void createAndModifyUser() {
+    userService.createUser(request1);
+    // 可能影响下一个测试
+}
+```
+
+### 正确：使用 @Transactional 回滚
+```java
+@Test
+@Transactional
+void createAndModifyUser() {
+    // 测试结束自动回滚
+}
+```
+
+## 持续测试
+
+### 开发期间
+```bash
+# 自动重新运行测试
+mvn test -DskipTests=false
 ```
 
 ### Pre-Commit Hook
 ```bash
-# Runs before every commit
-npm test && npm run lint
+# .git/hooks/pre-commit
+mvn test && mvn checkstyle:check
 ```
 
-### CI/CD Integration
+### CI/CD 集成
 ```yaml
 # GitHub Actions
+- name: Set up JDK 21
+  uses: actions/setup-java@v4
+  with:
+    java-version: '21'
+    distribution: 'temurin'
+
 - name: Run Tests
-  run: npm test -- --coverage
+  run: mvn clean test
+
+- name: Generate Coverage Report
+  run: mvn jacoco:report
+
 - name: Upload Coverage
   uses: codecov/codecov-action@v3
+  with:
+    file: target/site/jacoco/jacoco.xml
 ```
 
-## Best Practices
+## 最佳实践
 
-1. **Write Tests First** - Always TDD
-2. **One Assert Per Test** - Focus on single behavior
-3. **Descriptive Test Names** - Explain what's tested
-4. **Arrange-Act-Assert** - Clear test structure
-5. **Mock External Dependencies** - Isolate unit tests
-6. **Test Edge Cases** - Null, undefined, empty, large
-7. **Test Error Paths** - Not just happy paths
-8. **Keep Tests Fast** - Unit tests < 50ms each
-9. **Clean Up After Tests** - No side effects
-10. **Review Coverage Reports** - Identify gaps
+1. **先写测试** - 总是 TDD
+2. **一个测试一个断言（或相关断言组）** - 聚焦单一行为
+3. **描述性测试名称** - 使用 @DisplayName 说明测试内容
+4. **AAA 模式** - Arrange-Act-Assert 清晰结构
+5. **Mock 外部依赖** - 隔离单元测试
+6. **测试边界案例** - Null、空值、负数、大值
+7. **测试错误路径** - 不只是快乐路径
+8. **保持测试快速** - 单元测试 < 100ms
+9. **使用 Testcontainers** - 真实环境集成测试
+10. **@Transactional 回滚** - 保证测试隔离
+11. **使用 Record 作为 DTO** - Java 21 最佳实践
+12. **AssertJ 断言** - 比原生断言更易读
 
-## Success Metrics
+## Java 21 特性在测试中的应用
 
-- 80%+ code coverage achieved
-- All tests passing (green)
-- No skipped or disabled tests
-- Fast test execution (< 30s for unit tests)
-- E2E tests cover critical user flows
-- Tests catch bugs before production
+### 使用 Record 简化测试数据
+
+```java
+record TestData(String name, Integer age, String email) {}
+
+@Test
+void testWithRecord() {
+    TestData data = new TestData("Alice", 25, "alice@example.com");
+    assertThat(data.name()).isEqualTo("Alice");
+}
+```
+
+### 使用 Pattern Matching
+
+```java
+@Test
+void testPatternMatching(Object obj) {
+    switch (obj) {
+        case String s && s.length() > 5 ->
+            assertThat(s).hasSizeGreaterThan(5);
+        case Integer i ->
+            assertThat(i).isPositive();
+        default ->
+            fail("Unexpected type");
+    }
+}
+```
+
+### 使用 Virtual Threads 进行并发测试
+
+```java
+@Test
+void testConcurrentOperations() throws Exception {
+    try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
+        List<Future<Void>> futures = new ArrayList<>();
+        for (int i = 0; i < 100; i++) {
+            futures.add(executor.submit(() -> {
+                userService.createUser(testRequest());
+                return null;
+            }));
+        }
+        for (var future : futures) {
+            future.get(); // 等待所有任务完成
+        }
+    }
+}
+```
+
+## 成功指标
+
+- 达到 80%+ 代码覆盖率
+- 所有测试通过
+- 无跳过或停用的测试
+- 快速测试执行（单元测试 < 1分钟）
+- 集成测试涵盖关键业务流程
+- 测试在生产前捕捉 Bug
 
 ---
 
-**Remember**: Tests are not optional. They are the safety net that enables confident refactoring, rapid development, and production reliability.
+**记住**：测试不是可选的。它们是实现自信重构、快速开发和生产可靠性的安全网。

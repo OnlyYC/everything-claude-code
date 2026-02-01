@@ -1,172 +1,140 @@
-# Orchestrate Command
+# Orchestrate 指令
 
-Sequential agent workflow for complex tasks.
+复杂任务的循序 Agent 工作流程。
 
-## Usage
+## 使用方式
 
 `/orchestrate [workflow-type] [task-description]`
 
-## Workflow Types
+## 工作流程类型
 
 ### feature
-Full feature implementation workflow:
+完整的功能实现工作流程：
 ```
-planner -> tdd-guide -> code-reviewer -> security-reviewer
+planner -> tdd-guide -> code-reviewer -> java-reviewer
 ```
 
 ### bugfix
-Bug investigation and fix workflow:
+Bug 调查和修复工作流程：
 ```
 explorer -> tdd-guide -> code-reviewer
 ```
 
 ### refactor
-Safe refactoring workflow:
+安全重构工作流程：
 ```
 architect -> code-reviewer -> tdd-guide
 ```
 
 ### security
-Security-focused review:
+以安全性为焦点的审查：
 ```
-security-reviewer -> code-reviewer -> architect
+java-reviewer -> code-reviewer -> architect
 ```
 
-## Execution Pattern
+## 执行模式
 
-For each agent in the workflow:
+对工作流程中的每个 Agent：
 
-1. **Invoke agent** with context from previous agent
-2. **Collect output** as structured handoff document
-3. **Pass to next agent** in chain
-4. **Aggregate results** into final report
+1. **呼叫 Agent**，带入前一个 Agent 的上下文
+2. **收集输出**作为结构化交接文档
+3. **传递给下一个 Agent**
+4. **汇总结果**为最终报告
 
-## Handoff Document Format
+## 交接文档格式
 
-Between agents, create handoff document:
+Agent 之间，建立交接文档：
 
 ```markdown
-## HANDOFF: [previous-agent] -> [next-agent]
+## 交接：[前一个 Agent] -> [下一个 Agent]
 
-### Context
-[Summary of what was done]
+### 上下文
+[完成事项的摘要]
 
-### Findings
-[Key discoveries or decisions]
+### 发现
+[关键发现或决策]
 
-### Files Modified
-[List of files touched]
+### 修改的文件
+[触及的文件列表]
 
-### Open Questions
-[Unresolved items for next agent]
+### 开放问题
+[下一个 Agent 的未解决项目]
 
-### Recommendations
-[Suggested next steps]
+### 建议
+[建议的后续步骤]
 ```
 
-## Example: Feature Workflow
+## 最终报告格式
 
 ```
-/orchestrate feature "Add user authentication"
-```
-
-Executes:
-
-1. **Planner Agent**
-   - Analyzes requirements
-   - Creates implementation plan
-   - Identifies dependencies
-   - Output: `HANDOFF: planner -> tdd-guide`
-
-2. **TDD Guide Agent**
-   - Reads planner handoff
-   - Writes tests first
-   - Implements to pass tests
-   - Output: `HANDOFF: tdd-guide -> code-reviewer`
-
-3. **Code Reviewer Agent**
-   - Reviews implementation
-   - Checks for issues
-   - Suggests improvements
-   - Output: `HANDOFF: code-reviewer -> security-reviewer`
-
-4. **Security Reviewer Agent**
-   - Security audit
-   - Vulnerability check
-   - Final approval
-   - Output: Final Report
-
-## Final Report Format
-
-```
-ORCHESTRATION REPORT
+协调报告
 ====================
-Workflow: feature
-Task: Add user authentication
-Agents: planner -> tdd-guide -> code-reviewer -> security-reviewer
+工作流程：feature
+任务：新增用户认证模块
+Agents：planner -> tdd-guide -> code-reviewer -> java-reviewer
 
-SUMMARY
+摘要
 -------
-[One paragraph summary]
+[一段摘要]
 
-AGENT OUTPUTS
+AGENT 输出
 -------------
-Planner: [summary]
-TDD Guide: [summary]
-Code Reviewer: [summary]
-Security Reviewer: [summary]
+Planner：[摘要]
+TDD Guide：[摘要]
+Code Reviewer：[摘要]
+Java Reviewer：[摘要]
 
-FILES CHANGED
+变更的文件
 -------------
-[List all files modified]
+[列出所有修改的文件]
 
-TEST RESULTS
+测试结果
 ------------
-[Test pass/fail summary]
+[测试通过/失败摘要]
 
-SECURITY STATUS
+安全性状态
 ---------------
-[Security findings]
+[安全性发现]
 
-RECOMMENDATION
+建议
 --------------
-[SHIP / NEEDS WORK / BLOCKED]
+[发布 / 需要改进 / 阻挡]
 ```
 
-## Parallel Execution
+## 平行执行
 
-For independent checks, run agents in parallel:
+对于独立的检查，平行执行 Agents：
 
 ```markdown
-### Parallel Phase
-Run simultaneously:
-- code-reviewer (quality)
-- security-reviewer (security)
-- architect (design)
+### 平行阶段
+同时执行：
+- code-reviewer（品质）
+- java-reviewer（Java 特定问题）
+- architect（设计）
 
-### Merge Results
-Combine outputs into single report
+### 合并结果
+将输出合并为单一报告
 ```
 
-## Arguments
+## 参数
 
 $ARGUMENTS:
-- `feature <description>` - Full feature workflow
-- `bugfix <description>` - Bug fix workflow
-- `refactor <description>` - Refactoring workflow
-- `security <description>` - Security review workflow
-- `custom <agents> <description>` - Custom agent sequence
+- `feature <description>` - 完整功能工作流程
+- `bugfix <description>` - Bug 修复工作流程
+- `refactor <description>` - 重构工作流程
+- `security <description>` - 安全性审查工作流程
+- `custom <agents> <description>` - 自定义 Agent 序列
 
-## Custom Workflow Example
+## 自定义工作流程示例
 
 ```
-/orchestrate custom "architect,tdd-guide,code-reviewer" "Redesign caching layer"
+/orchestrate custom "architect,tdd-guide,code-reviewer" "重新设计缓存层"
 ```
 
-## Tips
+## 提示
 
-1. **Start with planner** for complex features
-2. **Always include code-reviewer** before merge
-3. **Use security-reviewer** for auth/payment/PII
-4. **Keep handoffs concise** - focus on what next agent needs
-5. **Run verification** between agents if needed
+1. **复杂功能从 planner 开始**
+2. **合并前总是包含 code-reviewer**
+3. **对验证/支付/PII 使用 java-reviewer**
+4. **保持交接简洁** - 专注于下一个 Agent 需要的内容
+5. **如有需要，在 Agents 之间执行 verification**

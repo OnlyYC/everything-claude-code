@@ -1,326 +1,239 @@
 ---
-description: Enforce test-driven development workflow. Scaffold interfaces, generate tests FIRST, then implement minimal code to pass. Ensure 80%+ coverage.
+description: Enforce test-driven development workflow. Generate JUnit 5 tests FIRST, then implement minimal code to pass. Ensure 80%+ coverage with JaCoCo.
 ---
 
-# TDD Command
+# TDD 指令
 
-This command invokes the **tdd-guide** agent to enforce test-driven development methodology.
+此指令调用 **java-tdd-guide** Agent 来强制执行 Java 测试驱动开发方法论。
 
-## What This Command Does
+## 此指令的功能
 
-1. **Scaffold Interfaces** - Define types/interfaces first
-2. **Generate Tests First** - Write failing tests (RED)
-3. **Implement Minimal Code** - Write just enough to pass (GREEN)
-4. **Refactor** - Improve code while keeping tests green (REFACTOR)
-5. **Verify Coverage** - Ensure 80%+ test coverage
+1. **定义接口骨架** - 先定义方法签名
+2. **先生成测试** - 编写失败的 JUnit 5 测试（RED）
+3. **实现最小代码** - 编写刚好足以通过的代码（GREEN）
+4. **重构** - 在测试保持绿色的同时改进代码（REFACTOR）
+5. **验证覆盖率** - 确保 80% 以上测试覆盖率
 
-## When to Use
+## 何时使用
 
-Use `/tdd` when:
-- Implementing new features
-- Adding new functions/components
-- Fixing bugs (write test that reproduces bug first)
-- Refactoring existing code
-- Building critical business logic
+在以下情况使用 `/tdd`：
+- 实现新功能
+- 新增新方法/组件
+- 修复 Bug（先编写重现 bug 的测试）
+- 重构现有代码
+- 构建关键业务逻辑
 
-## How It Works
+## 运作方式
 
-The tdd-guide agent will:
+java-tdd-guide Agent 会：
 
-1. **Define interfaces** for inputs/outputs
-2. **Write tests that will FAIL** (because code doesn't exist yet)
-3. **Run tests** and verify they fail for the right reason
-4. **Write minimal implementation** to make tests pass
-5. **Run tests** and verify they pass
-6. **Refactor** code while keeping tests green
-7. **Check coverage** and add more tests if below 80%
+1. **定义接口**用于输入/输出
+2. **编写会失败的测试**（因为代码还不存在）
+3. **执行测试**并验证它们因正确的原因失败
+4. **编写最小实现**使测试通过
+5. **执行测试**并验证它们通过
+6. **重构**代码，同时保持测试通过
+7. **检查覆盖率**，如果低于 80% 则新增更多测试
 
-## TDD Cycle
-
-```
-RED → GREEN → REFACTOR → REPEAT
-
-RED:      Write a failing test
-GREEN:    Write minimal code to pass
-REFACTOR: Improve code, keep tests passing
-REPEAT:   Next feature/scenario
-```
-
-## Example Usage
+## TDD 循环
 
 ```
-User: /tdd I need a function to calculate market liquidity score
+RED -> GREEN -> REFACTOR -> REPEAT
 
-Agent (tdd-guide):
-# TDD Session: Market Liquidity Score Calculator
+RED:      编写失败的测试
+GREEN:    编写最小代码使其通过
+REFACTOR: 改进代码，保持测试通过
+REPEAT:   下一个功能/场景
+```
 
-## Step 1: Define Interface (SCAFFOLD)
+## 测试模式
 
-```typescript
-// lib/liquidity.ts
-export interface MarketData {
-  totalVolume: number
-  bidAskSpread: number
-  activeTraders: number
-  lastTradeTime: Date
+### JUnit 5 标准测试
+
+```java
+@ExtendWith(MockitoExtension.class)
+class UserServiceTest {
+
+    @Mock
+    private UserMapper userMapper;
+
+    @InjectMocks
+    private UserServiceImpl userService;
+
+    @Test
+    @DisplayName("根据 ID 查询用户 - 存在")
+    void getUserById_Exists() {
+        // Arrange
+        Long userId = 1L;
+        UserDO userDO = UserDO.builder()
+                .id(userId)
+                .username("testuser")
+                .build();
+        when(userMapper.selectById(userId)).thenReturn(userDO);
+
+        // Act
+        UserVO result = userService.getUserById(userId);
+
+        // Assert
+        assertThat(result).isNotNull();
+        assertThat(result.getId()).isEqualTo(userId);
+        assertThat(result.getUsername()).isEqualTo("testuser");
+        verify(userMapper).selectById(userId);
+    }
+
+    @Test
+    @DisplayName("根据 ID 查询用户 - 不存在")
+    void getUserById_NotExists() {
+        // Arrange
+        Long userId = 999L;
+        when(userMapper.selectById(userId)).thenReturn(null);
+
+        // Act & Assert
+        assertThatThrownBy(() -> userService.getUserById(userId))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("用户不存在");
+    }
 }
-
-export function calculateLiquidityScore(market: MarketData): number {
-  // TODO: Implementation
-  throw new Error('Not implemented')
-}
 ```
 
-## Step 2: Write Failing Test (RED)
+### 参数化测试
 
-```typescript
-// lib/liquidity.test.ts
-import { calculateLiquidityScore } from './liquidity'
-
-describe('calculateLiquidityScore', () => {
-  it('should return high score for liquid market', () => {
-    const market = {
-      totalVolume: 100000,
-      bidAskSpread: 0.01,
-      activeTraders: 500,
-      lastTradeTime: new Date()
-    }
-
-    const score = calculateLiquidityScore(market)
-
-    expect(score).toBeGreaterThan(80)
-    expect(score).toBeLessThanOrEqual(100)
-  })
-
-  it('should return low score for illiquid market', () => {
-    const market = {
-      totalVolume: 100,
-      bidAskSpread: 0.5,
-      activeTraders: 2,
-      lastTradeTime: new Date(Date.now() - 86400000) // 1 day ago
-    }
-
-    const score = calculateLiquidityScore(market)
-
-    expect(score).toBeLessThan(30)
-    expect(score).toBeGreaterThanOrEqual(0)
-  })
-
-  it('should handle edge case: zero volume', () => {
-    const market = {
-      totalVolume: 0,
-      bidAskSpread: 0,
-      activeTraders: 0,
-      lastTradeTime: new Date()
-    }
-
-    const score = calculateLiquidityScore(market)
-
-    expect(score).toBe(0)
-  })
+```java
+@ParameterizedTest
+@DisplayName("密码校验 - 参数化测试")
+@CsvSource({
+    "Password123!, true",
+    "pass, false",
+    "12345678, false",
+    "Password, false"
 })
-```
-
-## Step 3: Run Tests - Verify FAIL
-
-```bash
-npm test lib/liquidity.test.ts
-
-FAIL lib/liquidity.test.ts
-  ✕ should return high score for liquid market (2 ms)
-    Error: Not implemented
-
-1 test failed, 0 passed
-```
-
-✅ Tests fail as expected. Ready to implement.
-
-## Step 4: Implement Minimal Code (GREEN)
-
-```typescript
-// lib/liquidity.ts
-export function calculateLiquidityScore(market: MarketData): number {
-  // Handle zero volume edge case
-  if (market.totalVolume === 0) {
-    return 0
-  }
-
-  // Calculate component scores (0-100 scale)
-  const volumeScore = Math.min(market.totalVolume / 1000, 100)
-  const spreadScore = Math.max(100 - (market.bidAskSpread * 1000), 0)
-  const traderScore = Math.min(market.activeTraders / 10, 100)
-
-  // Recent activity bonus
-  const hoursSinceLastTrade = (Date.now() - market.lastTradeTime.getTime()) / (1000 * 60 * 60)
-  const recencyScore = Math.max(100 - (hoursSinceLastTrade * 10), 0)
-
-  // Weighted average
-  const score = (
-    volumeScore * 0.4 +
-    spreadScore * 0.3 +
-    traderScore * 0.2 +
-    recencyScore * 0.1
-  )
-
-  return Math.min(Math.max(score, 0), 100) // Clamp to 0-100
+void validatePassword_Valid(String password, boolean expected) {
+    boolean result = passwordValidator.validate(password);
+    assertThat(result).isEqualTo(expected);
 }
 ```
 
-## Step 5: Run Tests - Verify PASS
+### Mock 测试
 
-```bash
-npm test lib/liquidity.test.ts
+```java
+@Test
+@DisplayName("创建用户 - 用户名已存在")
+void createUser_UsernameExists() {
+    // Arrange
+    CreateUserRequest request = CreateUserRequest.builder()
+            .username("existinguser")
+            .build();
+    when(userMapper.selectByUsername("existinguser"))
+            .thenReturn(Optional.of(new UserDO()));
 
-PASS lib/liquidity.test.ts
-  ✓ should return high score for liquid market (3 ms)
-  ✓ should return low score for illiquid market (2 ms)
-  ✓ should handle edge case: zero volume (1 ms)
-
-3 tests passed
-```
-
-✅ All tests passing!
-
-## Step 6: Refactor (IMPROVE)
-
-```typescript
-// lib/liquidity.ts - Refactored with constants and better readability
-const WEIGHTS = {
-  VOLUME: 0.4,
-  SPREAD: 0.3,
-  TRADERS: 0.2,
-  RECENCY: 0.1,
-} as const
-
-const SCALE_FACTORS = {
-  VOLUME: 1000,
-  SPREAD: 1000,
-  TRADERS: 10,
-  RECENCY_PENALTY: 10,
-} as const
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(Math.max(value, min), max)
-}
-
-export function calculateLiquidityScore(market: MarketData): number {
-  if (market.totalVolume === 0) return 0
-
-  const volumeScore = Math.min(market.totalVolume / SCALE_FACTORS.VOLUME, 100)
-  const spreadScore = clamp(100 - (market.bidAskSpread * SCALE_FACTORS.SPREAD), 0, 100)
-  const traderScore = Math.min(market.activeTraders / SCALE_FACTORS.TRADERS, 100)
-
-  const hoursSinceLastTrade = (Date.now() - market.lastTradeTime.getTime()) / (1000 * 60 * 60)
-  const recencyScore = clamp(100 - (hoursSinceLastTrade * SCALE_FACTORS.RECENCY_PENALTY), 0, 100)
-
-  const weightedScore =
-    volumeScore * WEIGHTS.VOLUME +
-    spreadScore * WEIGHTS.SPREAD +
-    traderScore * WEIGHTS.TRADERS +
-    recencyScore * WEIGHTS.RECENCY
-
-  return clamp(weightedScore, 0, 100)
+    // Act & Assert
+    assertThatThrownBy(() -> userService.createUser(request))
+            .isInstanceOf(BusinessException.class)
+            .hasMessage("用户名已存在");
 }
 ```
 
-## Step 7: Verify Tests Still Pass
+## 覆盖率要求
+
+- **所有代码至少 80%**
+- **以下类型需要 100%：**
+  - 财务计算
+  - 权限校验逻辑
+  - 安全关键代码
+  - 核心业务逻辑
+
+## TDD 最佳实践
+
+**应该做：**
+- 在任何实现前先编写测试
+- 在实现前执行测试并验证它们失败
+- 编写最小代码使测试通过
+- 只在测试通过后才重构
+- 新增边界情况和错误场景
+- 使用 @DisplayName 描述测试意图
+- 使用 AssertJ 或 Hamcrest 断言库
+
+**不应该做：**
+- 在测试之前编写实现
+- 跳过每次变更后执行测试
+- 一次编写太多代码
+- 忽略失败的测试
+- 测试实现细节（测试行为）
+- Mock 所有东西（优先使用真实对象）
+
+## 测试命令
 
 ```bash
-npm test lib/liquidity.test.ts
+# 执行所有测试
+mvn test
 
-PASS lib/liquidity.test.ts
-  ✓ should return high score for liquid market (3 ms)
-  ✓ should return low score for illiquid market (2 ms)
-  ✓ should handle edge case: zero volume (1 ms)
+# 执行特定测试类
+mvn test -Dtest=UserServiceTest
 
-3 tests passed
+# 执行特定测试方法
+mvn test -Dtest=UserServiceTest#getUserById_Exists
+
+# 生成覆盖率报告
+mvn test jacoco:report
+
+# 查看覆盖率
+mvn test jacoco:report && open target/site/jacoco/index.html
 ```
 
-✅ Refactoring complete, tests still passing!
+## 依赖配置
 
-## Step 8: Check Coverage
+```xml
+<!-- JUnit 5 -->
+<dependency>
+    <groupId>org.junit.jupiter</groupId>
+    <artifactId>junit-jupiter</artifactId>
+    <scope>test</scope>
+</dependency>
 
-```bash
-npm test -- --coverage lib/liquidity.test.ts
+<!-- Mockito -->
+<dependency>
+    <groupId>org.mockito</groupId>
+    <artifactId>mockito-core</artifactId>
+    <scope>test</scope>
+</dependency>
 
-File           | % Stmts | % Branch | % Funcs | % Lines
----------------|---------|----------|---------|--------
-liquidity.ts   |   100   |   100    |   100   |   100
+<!-- AssertJ -->
+<dependency>
+    <groupId>org.assertj</groupId>
+    <artifactId>assertj-core</artifactId>
+    <scope>test</scope>
+</dependency>
 
-Coverage: 100% ✅ (Target: 80%)
+<!-- Spring Boot Test -->
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-test</artifactId>
+    <scope>test</scope>
+</dependency>
 ```
 
-✅ TDD session complete!
-```
+## 重要提醒
 
-## TDD Best Practices
+**强制要求**：测试必须在实现之前编写。TDD 循环是：
 
-**DO:**
-- ✅ Write the test FIRST, before any implementation
-- ✅ Run tests and verify they FAIL before implementing
-- ✅ Write minimal code to make tests pass
-- ✅ Refactor only after tests are green
-- ✅ Add edge cases and error scenarios
-- ✅ Aim for 80%+ coverage (100% for critical code)
+1. **RED** - 编写失败的测试
+2. **GREEN** - 实现使其通过
+3. **REFACTOR** - 改进代码
 
-**DON'T:**
-- ❌ Write implementation before tests
-- ❌ Skip running tests after each change
-- ❌ Write too much code at once
-- ❌ Ignore failing tests
-- ❌ Test implementation details (test behavior)
-- ❌ Mock everything (prefer integration tests)
+绝不跳过 RED 阶段。绝不不在测试之前编写代码。
 
-## Test Types to Include
+## 与其他指令的集成
 
-**Unit Tests** (Function-level):
-- Happy path scenarios
-- Edge cases (empty, null, max values)
-- Error conditions
-- Boundary values
+- 先使用 `/plan` 理解要构建什么
+- 使用 `/tdd` 带着测试实现
+- 如果发生构建错误，使用 `/build-fix`
+- 使用 `/code-review` 审查实现
+- 使用 `/test-coverage` 验证覆盖率
 
-**Integration Tests** (Component-level):
-- API endpoints
-- Database operations
-- External service calls
-- React components with hooks
+## 相关 Agent
 
-**E2E Tests** (use `/e2e` command):
-- Critical user flows
-- Multi-step processes
-- Full stack integration
+此指令调用位于以下位置的 `java-tdd-guide` Agent：
+`~/.claude/agents/java-tdd-guide.md`
 
-## Coverage Requirements
-
-- **80% minimum** for all code
-- **100% required** for:
-  - Financial calculations
-  - Authentication logic
-  - Security-critical code
-  - Core business logic
-
-## Important Notes
-
-**MANDATORY**: Tests must be written BEFORE implementation. The TDD cycle is:
-
-1. **RED** - Write failing test
-2. **GREEN** - Implement to pass
-3. **REFACTOR** - Improve code
-
-Never skip the RED phase. Never write code before tests.
-
-## Integration with Other Commands
-
-- Use `/plan` first to understand what to build
-- Use `/tdd` to implement with tests
-- Use `/build-and-fix` if build errors occur
-- Use `/code-review` to review implementation
-- Use `/test-coverage` to verify coverage
-
-## Related Agents
-
-This command invokes the `tdd-guide` agent located at:
-`~/.claude/agents/tdd-guide.md`
-
-And can reference the `tdd-workflow` skill at:
-`~/.claude/skills/tdd-workflow/`
+并可参考位于以下位置的 `java-tdd-workflow` 技能：
+`~/.claude/skills/java-tdd-workflow/`

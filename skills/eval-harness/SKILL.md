@@ -1,227 +1,353 @@
 ---
 name: eval-harness
-description: Formal evaluation framework for Claude Code sessions implementing eval-driven development (EDD) principles
+description: Eval 驱动开发（EDD）框架：适配 Java 21 + Spring Boot 3 + Spring MVC + MyBatis-Plus + Maven + MySQL 技术栈的评估框架
 tools: Read, Write, Edit, Bash, Grep, Glob
 ---
 
-# Eval Harness Skill
+# Eval Harness 技能
 
-A formal evaluation framework for Claude Code sessions, implementing eval-driven development (EDD) principles.
+Eval 驱动开发（EDD）框架，适配 Java 21 + Spring Boot 3 + Spring MVC + MyBatis-Plus + Maven + MySQL 技术栈。
 
-## Philosophy
+## 理念
 
-Eval-Driven Development treats evals as the "unit tests of AI development":
-- Define expected behavior BEFORE implementation
-- Run evals continuously during development
-- Track regressions with each change
-- Use pass@k metrics for reliability measurement
+Eval 驱动开发将 evals 视为"AI 开发的单元测试"：
+- 在实现前定义预期行为
+- 开发期间持续执行 evals
+- 每次变更追踪回归
+- 使用 pass@k 指标进行可靠性测量
 
-## Eval Types
+## Eval 类型
 
-### Capability Evals
-Test if Claude can do something it couldn't before:
+### 能力 Evals
+
+测试 Claude 是否能做到以前做不到的事：
+
 ```markdown
 [CAPABILITY EVAL: feature-name]
-Task: Description of what Claude should accomplish
-Success Criteria:
-  - [ ] Criterion 1
-  - [ ] Criterion 2
-  - [ ] Criterion 3
-Expected Output: Description of expected result
+任务：功能描述
+成功标准：
+  - [ ] 标准 1
+  - [ ] 标准 2
+  - [ ] 标准 3
+预期输出：预期结果描述
 ```
 
-### Regression Evals
-Ensure changes don't break existing functionality:
+### 回归 Evals
+
+确保变更不会破坏现有功能：
+
 ```markdown
 [REGRESSION EVAL: feature-name]
-Baseline: SHA or checkpoint name
-Tests:
-  - existing-test-1: PASS/FAIL
-  - existing-test-2: PASS/FAIL
-  - existing-test-3: PASS/FAIL
-Result: X/Y passed (previously Y/Y)
+基准：Git SHA 或检查点名称
+测试：
+  - UserServiceTest#testCreateUser: PASS/FAIL
+  - OrderControllerTest#testCreateOrder: PASS/FAIL
+  - UserMapperTest#testSelectByCondition: PASS/FAIL
+结果：X/Y 通过（先前为 Y/Y）
 ```
 
-## Grader Types
+## 评分器类型
 
-### 1. Code-Based Grader
-Deterministic checks using code:
+### 1. 基于代码的评分器
+
+使用代码的确定性检查：
+
 ```bash
-# Check if file contains expected pattern
-grep -q "export function handleAuth" src/auth.ts && echo "PASS" || echo "FAIL"
+# 检查文件是否包含预期模式
+grep -q "public class UserService" src/main/java/com/example/service/UserService.java && echo "PASS" || echo "FAIL"
 
-# Check if tests pass
-npm test -- --testPathPattern="auth" && echo "PASS" || echo "FAIL"
+# 检查测试是否通过
+mvn test -Dtest=UserServiceTest && echo "PASS" || echo "FAIL"
 
-# Check if build succeeds
-npm run build && echo "PASS" || echo "FAIL"
+# 检查构建是否成功
+mvn clean compile && echo "PASS" || echo "FAIL"
+
+# 检查特定方法是否存在
+grep -q "public User createUser CreateUserDTO" src/main/java/com/example/service/UserService.java && echo "PASS" || echo "FAIL"
+
+# 检查 MyBatis Mapper 是否存在
+grep -q "public interface UserMapper" src/main/java/com/example/mapper/UserMapper.java && echo "PASS" || echo "FAIL"
+
+# 检查 Controller 端点是否存在
+grep -q "@PostMapping\|@GetMapping\|@PutMapping\|@DeleteMapping" src/main/java/com/example/controller/UserController.java && echo "PASS" || echo "FAIL"
 ```
 
-### 2. Model-Based Grader
-Use Claude to evaluate open-ended outputs:
+### 2. 基于模型的评分器
+
+使用 Claude 评估开放式输出：
+
 ```markdown
 [MODEL GRADER PROMPT]
-Evaluate the following code change:
-1. Does it solve the stated problem?
-2. Is it well-structured?
-3. Are edge cases handled?
-4. Is error handling appropriate?
+评估以下 Java 代码变更：
+1. 是否符合 Spring Boot 3 最佳实践？
+2. 是否正确使用 MyBatis-Plus？
+3. 事务注解 @Transactional 使用是否正确？
+4. 异常处理是否恰当？
+5. 是否符合 Java 21 语法特性？
 
-Score: 1-5 (1=poor, 5=excellent)
-Reasoning: [explanation]
+分数：1-5（1=差，5=优秀）
+理由：[解释]
 ```
 
-### 3. Human Grader
-Flag for manual review:
+### 3. 人工评分器
+
+标记为手动审查：
+
 ```markdown
 [HUMAN REVIEW REQUIRED]
-Change: Description of what changed
-Reason: Why human review is needed
-Risk Level: LOW/MEDIUM/HIGH
+变更：变更内容描述
+理由：为何需要人工审查
+风险等级：LOW/MEDIUM/HIGH
 ```
 
-## Metrics
+## 指标
 
 ### pass@k
-"At least one success in k attempts"
-- pass@1: First attempt success rate
-- pass@3: Success within 3 attempts
-- Typical target: pass@3 > 90%
+
+"k 次尝试中至少一次成功"
+- pass@1：第一次尝试成功率
+- pass@3：3 次尝试内成功
+- 典型目标：pass@3 > 90%
 
 ### pass^k
-"All k trials succeed"
-- Higher bar for reliability
-- pass^3: 3 consecutive successes
-- Use for critical paths
 
-## Eval Workflow
+"所有 k 次试验都成功"
+- 更高的可靠性标准
+- pass^3：连续 3 次成功
+- 用于关键路径
 
-### 1. Define (Before Coding)
+## Eval 工作流程
+
+### 1. 定义（编码前）
+
 ```markdown
-## EVAL DEFINITION: feature-xyz
+## EVAL 定义：user-management
 
-### Capability Evals
-1. Can create new user account
-2. Can validate email format
-3. Can hash password securely
+### 能力 Evals
+1. 可以创建新用户账户
+2. 可以验证邮箱格式
+3. 可以安全地哈希密码
+4. 可以查询用户列表
+5. 可以更新用户信息
 
-### Regression Evals
-1. Existing login still works
-2. Session management unchanged
-3. Logout flow intact
+### 回归 Evals
+1. 现有登录仍可运作
+2. 会话管理未变更
+3. 其他业务模块未受影响
 
-### Success Metrics
-- pass@3 > 90% for capability evals
-- pass^3 = 100% for regression evals
+### 成功指标
+- 能力 evals 的 pass@3 > 90%
+- 回归 evals 的 pass^3 = 100%
+- 测试覆盖率 > 80%
 ```
 
-### 2. Implement
-Write code to pass the defined evals.
+### 2. 实现
 
-### 3. Evaluate
+编写代码以通过定义的 evals。
+
+### 3. 评估
+
 ```bash
-# Run capability evals
-[Run each capability eval, record PASS/FAIL]
+# 执行能力 evals
+mvn test -Dtest=*UserTest
 
-# Run regression evals
-npm test -- --testPathPattern="existing"
+# 执行回归 evals
+mvn test -Dtest=*IntegrationTest
 
-# Generate report
+# 生成覆盖率报告
+mvn jacoco:report
 ```
 
-### 4. Report
+### 4. 报告
+
 ```markdown
-EVAL REPORT: feature-xyz
+EVAL 报告：user-management
 ========================
 
-Capability Evals:
+能力 Evals：
   create-user:     PASS (pass@1)
   validate-email:  PASS (pass@2)
   hash-password:   PASS (pass@1)
-  Overall:         3/3 passed
+  list-users:      PASS (pass@1)
+  update-user:     PASS (pass@3)
+  整体：           5/5 通过
 
-Regression Evals:
+回归 Evals：
   login-flow:      PASS
   session-mgmt:    PASS
-  logout-flow:     PASS
-  Overall:         3/3 passed
+  other-modules:   PASS
+  整体：           3/3 通过
 
-Metrics:
-  pass@1: 67% (2/3)
-  pass@3: 100% (3/3)
+指标：
+  pass@1: 80% (4/5)
+  pass@3: 100% (5/5)
+  覆盖率： 85%
 
-Status: READY FOR REVIEW
+状态：准备审查
 ```
 
-## Integration Patterns
+## 整合模式
 
-### Pre-Implementation
+### 实现前
+
 ```
 /eval define feature-name
 ```
-Creates eval definition file at `.claude/evals/feature-name.md`
 
-### During Implementation
+在 `.claude/evals/feature-name.md` 创建 eval 定义文件。
+
+### 实现期间
+
 ```
 /eval check feature-name
 ```
-Runs current evals and reports status
 
-### Post-Implementation
+执行当前 evals 并报告状态。
+
+### 实现后
+
 ```
 /eval report feature-name
 ```
-Generates full eval report
 
-## Eval Storage
+生成完整 eval 报告。
 
-Store evals in project:
+## Eval 储存
+
+在项目中储存 evals：
+
 ```
 .claude/
   evals/
-    feature-xyz.md      # Eval definition
-    feature-xyz.log     # Eval run history
-    baseline.json       # Regression baselines
+    user-management.md      # Eval 定义
+    user-management.log     # Eval 执行历史
+    baseline.json           # 回归基准
 ```
 
-## Best Practices
+## 最佳实践
 
-1. **Define evals BEFORE coding** - Forces clear thinking about success criteria
-2. **Run evals frequently** - Catch regressions early
-3. **Track pass@k over time** - Monitor reliability trends
-4. **Use code graders when possible** - Deterministic > probabilistic
-5. **Human review for security** - Never fully automate security checks
-6. **Keep evals fast** - Slow evals don't get run
-7. **Version evals with code** - Evals are first-class artifacts
+1. **编码前定义 evals** - 强制清楚思考成功标准
+2. **频繁执行 evals** - 及早捕捉回归
+3. **随时间追踪 pass@k** - 监控可靠性趋势
+4. **优先使用代码评分器** - 确定性 > 概率性
+5. **安全性需人工审查** - 永远不要完全自动化安全检查
+6. **保持 evals 快速** - 慢 evals 不会被执行
+7. **与代码一起版本化 evals** - Evals 是一等工件
 
-## Example: Adding Authentication
+## 示例：用户管理模块
 
 ```markdown
-## EVAL: add-authentication
+## EVAL：user-management
 
-### Phase 1: Define (10 min)
-Capability Evals:
-- [ ] User can register with email/password
-- [ ] User can login with valid credentials
-- [ ] Invalid credentials rejected with proper error
-- [ ] Sessions persist across page reloads
-- [ ] Logout clears session
+### 阶段 1：定义
 
-Regression Evals:
-- [ ] Public routes still accessible
-- [ ] API responses unchanged
-- [ ] Database schema compatible
+能力 Evals：
+- [ ] 用户可以用邮箱/密码注册
+- [ ] 邮箱格式验证正确
+- [ ] 密码使用 BCrypt 哈希
+- [ ] 用户信息正确保存到数据库
+- [ ] 可以分页查询用户列表
 
-### Phase 2: Implement (varies)
-[Write code]
+回归 Evals：
+- [ ] 现有 API 端点正常工作
+- [ ] 数据库 schema 兼容
+- [ ] 其他业务模块不受影响
 
-### Phase 3: Evaluate
-Run: /eval check add-authentication
+### 阶段 2：实现
 
-### Phase 4: Report
-EVAL REPORT: add-authentication
-==============================
-Capability: 5/5 passed (pass@3: 100%)
-Regression: 3/3 passed (pass^3: 100%)
-Status: SHIP IT
+创建以下文件：
+- Entity: UserEntity.java
+- Mapper: UserMapper.java (MyBatis-Plus)
+- Service: UserService.java
+- Controller: UserController.java
+- DTO: CreateUserDTO.java, UserVO.java
+- Tests: UserServiceTest.java, UserControllerTest.java
+
+### 阶段 3：评估
+
+执行：mvn clean test
+
+### 阶段 4：报告
+
+EVAL 报告：user-management
+==========================
+
+能力：5/5 通过（pass@3：100%）
+回归：3/3 通过（pass^3：100%）
+覆盖率：88%
+
+状态：准备合并
 ```
+
+## 快速命令参考
+
+### Maven 测试命令
+
+```bash
+# 运行所有测试
+mvn test
+
+# 运行特定测试类
+mvn test -Dtest=UserServiceTest
+
+# 运行特定测试方法
+mvn test -Dtest=UserServiceTest#shouldCreateUser
+
+# 跳过测试
+mvn -DskipTests
+
+# 生成测试报告
+mvn surefire-report:report
+
+# 生成覆盖率报告
+mvn jacoco:report
+```
+
+### 代码检查命令
+
+```bash
+# 编译检查
+mvn compile
+
+# 静态分析
+mvn spotbugs:check
+mvn checkstyle:check
+mvn pmd:check
+
+# 依赖检查
+mvn org.owasp:dependency-check-maven:check
+
+# 完整验证
+mvn clean verify
+```
+
+## 项目结构参考
+
+```
+src/
+├── main/
+│   ├── java/
+│   │   └── com/
+│   │       └── example/
+│   │           ├── controller/    # Controller 层
+│   │           ├── service/       # Service 层
+│   │           ├── mapper/        # MyBatis Mapper
+│   │           ├── entity/        # 实体类
+│   │           ├── dto/           # 数据传输对象
+│   │           ├── vo/            # 视图对象
+│   │           ├── config/        # 配置类
+│   │           └── Application.java
+│   └── resources/
+│       ├── mapper/                # MyBatis XML
+│       ├── application.yml
+│       └── application-test.yml
+└── test/
+    └── java/
+        └── com/
+            └── example/
+                ├── controller/
+                ├── service/
+                └── mapper/
+```
+
+**记住**：快速反馈胜过后期意外。在生产系统中将警告视为缺陷。保持高标准的代码质量和测试覆盖率。

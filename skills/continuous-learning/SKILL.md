@@ -3,21 +3,21 @@ name: continuous-learning
 description: Automatically extract reusable patterns from Claude Code sessions and save them as learned skills for future use.
 ---
 
-# Continuous Learning Skill
+# 持续学习技能
 
-Automatically evaluates Claude Code sessions on end to extract reusable patterns that can be saved as learned skills.
+自动评估 Claude Code 会话结束时内容，提取可重用模式并储存为学习技能。
 
-## How It Works
+## 运作方式
 
-This skill runs as a **Stop hook** at the end of each session:
+此技能作为 **Stop hook** 在每个会话结束时执行：
 
-1. **Session Evaluation**: Checks if session has enough messages (default: 10+)
-2. **Pattern Detection**: Identifies extractable patterns from the session
-3. **Skill Extraction**: Saves useful patterns to `~/.claude/skills/learned/`
+1. **会话评估**：检查会话是否有足够讯息（默认：10+ 则）
+2. **模式检测**：从会话识别可提取的模式
+3. **技能提取**：将有用模式储存到 `~/.claude/skills/learned/`
 
-## Configuration
+## 设定
 
-Edit `config.json` to customize:
+编辑 `config.json` 以自订：
 
 ```json
 {
@@ -40,19 +40,19 @@ Edit `config.json` to customize:
 }
 ```
 
-## Pattern Types
+## 模式类型
 
-| Pattern | Description |
-|---------|-------------|
-| `error_resolution` | How specific errors were resolved |
-| `user_corrections` | Patterns from user corrections |
-| `workarounds` | Solutions to framework/library quirks |
-| `debugging_techniques` | Effective debugging approaches |
-| `project_specific` | Project-specific conventions |
+| 模式 | 描述 |
+|------|------|
+| `error_resolution` | 特定错误如何被解决 |
+| `user_corrections` | 来自使用者修正的模式 |
+| `workarounds` | 框架/函数库怪异问题的解决方案 |
+| `debugging_techniques` | 有效的除错方法 |
+| `project_specific` | 项目特定惯例 |
 
-## Hook Setup
+## Hook 设定
 
-Add to your `~/.claude/settings.json`:
+新增到你的 `~/.claude/settings.json`：
 
 ```json
 {
@@ -68,43 +68,43 @@ Add to your `~/.claude/settings.json`:
 }
 ```
 
-## Why Stop Hook?
+## 为什么用 Stop Hook？
 
-- **Lightweight**: Runs once at session end
-- **Non-blocking**: Doesn't add latency to every message
-- **Complete context**: Has access to full session transcript
+- **轻量**：会话结束时只执行一次
+- **非阻塞**：不会为每则讯息增加延迟
+- **完整上下文**：可存取完整会话记录
 
-## Related
+## 相关
 
-- [The Longform Guide](https://x.com/affaanmustafa/status/2014040193557471352) - Section on continuous learning
-- `/learn` command - Manual pattern extraction mid-session
+- [Longform Guide](https://x.com/affaanmustafa/status/2014040193557471352) - 持续学习章节
+- `/learn` 指令 - 会话中手动提取模式
 
 ---
 
-## Comparison Notes (Research: Jan 2025)
+## 比较笔记（研究：2025 年 1 月）
 
 ### vs Homunculus (github.com/humanplane/homunculus)
 
-Homunculus v2 takes a more sophisticated approach:
+Homunculus v2 采用更复杂的方法：
 
-| Feature | Our Approach | Homunculus v2 |
-|---------|--------------|---------------|
-| Observation | Stop hook (end of session) | PreToolUse/PostToolUse hooks (100% reliable) |
-| Analysis | Main context | Background agent (Haiku) |
-| Granularity | Full skills | Atomic "instincts" |
-| Confidence | None | 0.3-0.9 weighted |
-| Evolution | Direct to skill | Instincts → cluster → skill/command/agent |
-| Sharing | None | Export/import instincts |
+| 功能 | 我们的方法 | Homunculus v2 |
+|------|----------|---------------|
+| 观察 | Stop hook（会话结束） | PreToolUse/PostToolUse hooks（100% 可靠） |
+| 分析 | 主要上下文 | 背景 agent（Haiku） |
+| 粒度 | 完整技能 | 原子"本能" |
+| 信心 | 无 | 0.3-0.9 加权 |
+| 演化 | 直接到技能 | 本能 → 聚类 → 技能/指令/agent |
+| 分享 | 无 | 导出/导入本能 |
 
-**Key insight from homunculus:**
-> "v1 relied on skills to observe. Skills are probabilistic—they fire ~50-80% of the time. v2 uses hooks for observation (100% reliable) and instincts as the atomic unit of learned behavior."
+**来自 homunculus 的关键见解：**
+> "v1 依赖技能进行观察。技能是概率性的——它们触发约 50-80% 的时间。v2 使用 hooks 进行观察（100% 可靠），并以本能作为学习行为的原子单位。"
 
-### Potential v2 Enhancements
+### 潜在 v2 增强功能
 
-1. **Instinct-based learning** - Smaller, atomic behaviors with confidence scoring
-2. **Background observer** - Haiku agent analyzing in parallel
-3. **Confidence decay** - Instincts lose confidence if contradicted
-4. **Domain tagging** - code-style, testing, git, debugging, etc.
-5. **Evolution path** - Cluster related instincts into skills/commands
+1. **基于本能的学习** - 较小的原子行为，带信心评分
+2. **背景观察者** - Haiku agent 并行分析
+3. **信心衰减** - 如果被矛盾则本能失去信心
+4. **领域标记** - code-style、testing、git、debugging 等
+5. **演化路径** - 将相关本能聚类为技能/指令
 
-See: `/Users/affoon/Documents/tasks/12-continuous-learning-v2.md` for full spec.
+参见：`/Users/affoon/Documents/tasks/12-continuous-learning-v2.md` 完整规格。

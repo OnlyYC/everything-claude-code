@@ -1,80 +1,84 @@
 ---
-description: Configure your preferred package manager (npm/pnpm/yarn/bun)
+description: Configure your preferred build tool (Maven)
 disable-model-invocation: true
 ---
 
-# Package Manager Setup
+# 构建工具配置
 
-Configure your preferred package manager for this project or globally.
+为此项目或全局配置您首选的构建工具。
 
-## Usage
+## 使用方法
 
 ```bash
-# Detect current package manager
-node scripts/setup-package-manager.js --detect
+# 检测当前的构建工具
+java -jar scripts/build-tool-detector.jar --detect
 
-# Set global preference
-node scripts/setup-package-manager.js --global pnpm
+# 设置全局偏好
+java -jar scripts/build-tool-detector.jar --global maven
 
-# Set project preference
-node scripts/setup-package-manager.js --project bun
+# 设置项目偏好
+java -jar scripts/build-tool-detector.jar --project maven
 
-# List available package managers
-node scripts/setup-package-manager.js --list
+# 列出可用的构建工具
+java -jar scripts/build-tool-detector.jar --list
 ```
 
-## Detection Priority
+## 检测优先级
 
-When determining which package manager to use, the following order is checked:
+决定使用哪个构建工具时，按以下顺序检查：
 
-1. **Environment variable**: `CLAUDE_PACKAGE_MANAGER`
-2. **Project config**: `.claude/package-manager.json`
-3. **package.json**: `packageManager` field
-4. **Lock file**: Presence of package-lock.json, yarn.lock, pnpm-lock.yaml, or bun.lockb
-5. **Global config**: `~/.claude/package-manager.json`
-6. **Fallback**: First available package manager (pnpm > bun > yarn > npm)
+1. **环境变量**：`CLAUDE_BUILD_TOOL`
+2. **项目配置**：`.claude/build-tool.json`
+3. **项目文件**：是否存在 pom.xml
+4. **全局配置**：`~/.claude/build-tool.json`
+5. **回退**：第一个可用的构建工具（Maven）
 
-## Configuration Files
+## 配置文件
 
-### Global Configuration
+### 全局配置
 ```json
-// ~/.claude/package-manager.json
+// ~/.claude/build-tool.json
 {
-  "packageManager": "pnpm"
+  "buildTool": "maven"
 }
 ```
 
-### Project Configuration
+### 项目配置
 ```json
-// .claude/package-manager.json
+// .claude/build-tool.json
 {
-  "packageManager": "bun"
+  "buildTool": "maven"
 }
 ```
 
-### package.json
-```json
-{
-  "packageManager": "pnpm@8.6.0"
-}
-```
+## 环境变量
 
-## Environment Variable
-
-Set `CLAUDE_PACKAGE_MANAGER` to override all other detection methods:
+设置 `CLAUDE_BUILD_TOOL` 以覆盖所有其他检测方法：
 
 ```bash
 # Windows (PowerShell)
-$env:CLAUDE_PACKAGE_MANAGER = "pnpm"
+$env:CLAUDE_BUILD_TOOL = "maven"
 
 # macOS/Linux
-export CLAUDE_PACKAGE_MANAGER=pnpm
+export CLAUDE_BUILD_TOOL=maven
 ```
 
-## Run the Detection
+## Maven 常用命令
 
-To see current package manager detection results, run:
+| 命令 | 说明 |
+|------|------|
+| `mvn clean compile` | 清理并编译 |
+| `mvn clean package` | 打包 |
+| `mvn clean install` | 安装到本地仓库 |
+| `mvn test` | 执行单元测试 |
+| `mvn verify` | 执行集成测试 |
+| `mvn spring-boot:run` | 启动应用 |
+
+
+## 执行检测
+
+要查看当前构建工具检测结果，执行：
 
 ```bash
-node scripts/setup-package-manager.js --detect
+java -jar scripts/build-tool-detector.jar --detect
 ```

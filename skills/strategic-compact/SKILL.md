@@ -3,33 +3,33 @@ name: strategic-compact
 description: Suggests manual context compaction at logical intervals to preserve context through task phases rather than arbitrary auto-compaction.
 ---
 
-# Strategic Compact Skill
+# 策略性压缩技能
 
-Suggests manual `/compact` at strategic points in your workflow rather than relying on arbitrary auto-compaction.
+在工作流程的策略点建议手动 `/compact`，而非依赖任意的自动压缩。
 
-## Why Strategic Compaction?
+## 为什么需要策略性压缩？
 
-Auto-compaction triggers at arbitrary points:
-- Often mid-task, losing important context
-- No awareness of logical task boundaries
-- Can interrupt complex multi-step operations
+自动压缩在任意点触发：
+- 经常在任务中途，丢失重要上下文
+- 不知道逻辑任务边界
+- 可能中断复杂的多步骤操作
 
-Strategic compaction at logical boundaries:
-- **After exploration, before execution** - Compact research context, keep implementation plan
-- **After completing a milestone** - Fresh start for next phase
-- **Before major context shifts** - Clear exploration context before different task
+逻辑边界的策略性压缩：
+- **探索后、执行前** - 压缩研究上下文，保留实现计划
+- **完成后里程碑** - 为下一阶段重新开始
+- **主要上下文转换前** - 在不同任务前清除探索上下文
 
-## How It Works
+## 运作方式
 
-The `suggest-compact.sh` script runs on PreToolUse (Edit/Write) and:
+`suggest-compact.sh` 脚本在 PreToolUse（Edit/Write）执行并：
 
-1. **Tracks tool calls** - Counts tool invocations in session
-2. **Threshold detection** - Suggests at configurable threshold (default: 50 calls)
-3. **Periodic reminders** - Reminds every 25 calls after threshold
+1. **跟踪工具调用** - 计算会话中的工具调用次数
+2. **门槛检测** - 在可配置门槛建议（默认：50 次调用）
+3. **定期提醒** - 门槛后每 25 次调用提醒一次
 
-## Hook Setup
+## Hook 配置
 
-Add to your `~/.claude/settings.json`:
+新增到你的 `~/.claude/settings.json`：
 
 ```json
 {
@@ -45,19 +45,19 @@ Add to your `~/.claude/settings.json`:
 }
 ```
 
-## Configuration
+## 配置
 
-Environment variables:
-- `COMPACT_THRESHOLD` - Tool calls before first suggestion (default: 50)
+环境变量：
+- `COMPACT_THRESHOLD` - 第一次建议前的工具调用次数（默认：50）
 
-## Best Practices
+## 最佳实践
 
-1. **Compact after planning** - Once plan is finalized, compact to start fresh
-2. **Compact after debugging** - Clear error-resolution context before continuing
-3. **Don't compact mid-implementation** - Preserve context for related changes
-4. **Read the suggestion** - The hook tells you *when*, you decide *if*
+1. **规划后压缩** - 计划确定后，压缩以重新开始
+2. **调试后压缩** - 继续前清除错误解决上下文
+3. **不要在实现中途压缩** - 为相关变更保留上下文
+4. **阅读建议** - Hook 告诉你*何时*，你决定*是否*
 
-## Related
+## 相关
 
-- [The Longform Guide](https://x.com/affaanmustafa/status/2014040193557471352) - Token optimization section
-- Memory persistence hooks - For state that survives compaction
+- [Longform Guide](https://x.com/affaanmustafa/status/2014040193557471352) - Token 优化章节
+- 记忆持久性 hooks - 用于压缩后存活的状态

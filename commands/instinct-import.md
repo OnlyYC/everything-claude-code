@@ -1,32 +1,32 @@
 ---
 name: instinct-import
-description: Import instincts from teammates, Skill Creator, or other sources
+description: 从团队成员、技能生成器或其他来源导入经验文件
 command: true
 ---
 
-# Instinct Import Command
+# 经验导入指令
 
-## Implementation
+## 实现方式
 
-Run the instinct CLI using the plugin root path:
-
-```bash
-python3 "${CLAUDE_PLUGIN_ROOT}/skills/continuous-learning-v2/scripts/instinct-cli.py" import <file-or-url> [--dry-run] [--force] [--min-confidence 0.7]
-```
-
-Or if `CLAUDE_PLUGIN_ROOT` is not set (manual installation):
+使用插件根目录运行经验 CLI 工具：
 
 ```bash
-python3 ~/.claude/skills/continuous-learning-v2/scripts/instinct-cli.py import <file-or-url>
+python3 "${CLAUDE_PLUGIN_ROOT}/skills/continuous-learning-v2/scripts/instinct-cli.py" import <文件或URL> [--dry-run] [--force] [--min-confidence 0.7]
 ```
 
-Import instincts from:
-- Teammates' exports
-- Skill Creator (repo analysis)
-- Community collections
-- Previous machine backups
+如果 `CLAUDE_PLUGIN_ROOT` 未设置（手动安装）：
 
-## Usage
+```bash
+python3 ~/.claude/skills/continuous-learning-v2/scripts/instinct-cli.py import <文件或URL>
+```
+
+可从以下来源导入经验：
+- 团队成员导出的经验文件
+- 技能生成器（仓库分析）
+- 社区经验合集
+- 旧机器备份
+
+## 使用方法
 
 ```
 /instinct-import team-instincts.yaml
@@ -34,109 +34,143 @@ Import instincts from:
 /instinct-import --from-skill-creator acme/webapp
 ```
 
-## What to Do
+## 执行步骤
 
-1. Fetch the instinct file (local path or URL)
-2. Parse and validate the format
-3. Check for duplicates with existing instincts
-4. Merge or add new instincts
-5. Save to `~/.claude/homunculus/instincts/inherited/`
+1. 获取经验文件（本地路径或 URL）
+2. 解析并验证格式
+3. 检查与现有经验的重复情况
+4. 合并或新增经验
+5. 保存到 `~/.claude/homunculus/instincts/inherited/`
 
-## Import Process
+## 导入流程
 
 ```
-📥 Importing instincts from: team-instincts.yaml
+📥 正在从 team-instincts.yaml 导入经验
 ================================================
 
-Found 12 instincts to import.
+找到 12 条待导入经验。
 
-Analyzing conflicts...
+分析冲突中...
 
-## New Instincts (8)
-These will be added:
-  ✓ use-zod-validation (confidence: 0.7)
-  ✓ prefer-named-exports (confidence: 0.65)
-  ✓ test-async-functions (confidence: 0.8)
+## 新增经验（8 条）
+以下经验将被添加：
+  ✓ use-zod-validation（置信度：0.7）
+  ✓ prefer-named-exports（置信度：0.65）
+  ✓ test-async-functions（置信度：0.8）
   ...
 
-## Duplicate Instincts (3)
-Already have similar instincts:
+## 重复经验（3 条）
+已存在相似经验：
   ⚠️ prefer-functional-style
-     Local: 0.8 confidence, 12 observations
-     Import: 0.7 confidence
-     → Keep local (higher confidence)
+     本地：置信度 0.8，观察 12 次
+     导入：置信度 0.7
+     → 保留本地（置信度更高）
 
   ⚠️ test-first-workflow
-     Local: 0.75 confidence
-     Import: 0.9 confidence
-     → Update to import (higher confidence)
+     本地：置信度 0.75
+     导入：置信度 0.9
+     → 更新为导入版本（置信度更高）
 
-## Conflicting Instincts (1)
-These contradict local instincts:
+## 冲突经验（1 条）
+与本地经验存在冲突：
   ❌ use-classes-for-services
-     Conflicts with: avoid-classes
-     → Skip (requires manual resolution)
+     冲突于：avoid-classes
+     → 跳过（需要手动处理）
 
 ---
-Import 8 new, update 1, skip 3?
+导入 8 条新经验，更新 1 条，跳过 3 条？
 ```
 
-## Merge Strategies
+## 合并策略
 
-### For Duplicates
-When importing an instinct that matches an existing one:
-- **Higher confidence wins**: Keep the one with higher confidence
-- **Merge evidence**: Combine observation counts
-- **Update timestamp**: Mark as recently validated
+### 重复经验处理
 
-### For Conflicts
-When importing an instinct that contradicts an existing one:
-- **Skip by default**: Don't import conflicting instincts
-- **Flag for review**: Mark both as needing attention
-- **Manual resolution**: User decides which to keep
+导入与现有经验匹配的经验时：
+- **高置信度优先**：保留置信度更高的版本
+- **合并依据**：累加观察次数
+- **更新时间戳**：标记为最近验证过
 
-## Source Tracking
+### 冲突经验处理
 
-Imported instincts are marked with:
+导入与现有经验相矛盾的经验时：
+- **默认跳过**：不导入冲突经验
+- **标记待审查**：将双方标记为需要关注
+- **手动决策**：由用户决定保留哪个
+
+## 来源追踪
+
+导入的经验会附带以下标记：
+
 ```yaml
 source: "inherited"
 imported_from: "team-instincts.yaml"
 imported_at: "2025-01-22T10:30:00Z"
-original_source: "session-observation"  # or "repo-analysis"
+original_source: "session-observation"  # 或 "repo-analysis"
 ```
 
-## Skill Creator Integration
+## 技能生成器集成
 
-When importing from Skill Creator:
+从技能生成器导入时：
 
 ```
 /instinct-import --from-skill-creator acme/webapp
 ```
 
-This fetches instincts generated from repo analysis:
-- Source: `repo-analysis`
-- Higher initial confidence (0.7+)
-- Linked to source repository
+这将获取从仓库分析生成的经验：
+- 来源：`repo-analysis`
+- 初始置信度较高（0.7+）
+- 关联到源仓库
 
-## Flags
+## Java 技术栈经验示例
 
-- `--dry-run`: Preview without importing
-- `--force`: Import even if conflicts exist
-- `--merge-strategy <higher|local|import>`: How to handle duplicates
-- `--from-skill-creator <owner/repo>`: Import from Skill Creator analysis
-- `--min-confidence <n>`: Only import instincts above threshold
+导入 Spring Boot + MyBatis-Plus 项目经验时：
 
-## Output
-
-After import:
 ```
-✅ Import complete!
+## 新增经验（5 条）
+  ✓ service-layer-isolation（置信度：0.9）
+     "业务逻辑必须通过 Service 层，Controller 不可直接调用 Mapper"
 
-Added: 8 instincts
-Updated: 1 instinct
-Skipped: 3 instincts (2 duplicates, 1 conflict)
+  ✓ mybatis-param-binding（置信度：0.95）
+     "MyBatis SQL 必须使用 #{} 参数绑定，禁止 ${}"
 
-New instincts saved to: ~/.claude/homunculus/instincts/inherited/
+  ✓ dto-vo-separation（置信度：0.85）
+     "接口返回使用 VO，参数接收使用 DTO，禁止直接返回 Entity"
 
-Run /instinct-status to see all instincts.
+  ✓ transactional-readonly（置信度：0.8）
+     "查询方法必须添加 @Transactional(readOnly = true)"
+
+  ✓ global-exception-handler（置信度：0.9）
+     "异常统一由 @RestControllerAdvice 处理，禁止 try-catch 吞异常"
 ```
+
+## 命令参数
+
+| 参数 | 说明 |
+|------|------|
+| `--dry-run` | 预览但不实际导入 |
+| `--force` | 即使存在冲突也强制导入 |
+| `--merge-strategy <higher\|local\|import>` | 重复经验处理策略 |
+| `--from-skill-creator <所有者/仓库>` | 从技能生成器分析结果导入 |
+| `--min-confidence <值>` | 仅导入高于指定置信度的经验 |
+
+## 输出结果
+
+导入完成后：
+
+```
+✅ 导入完成！
+
+新增：8 条经验
+更新：1 条经验
+跳过：3 条经验（2 条重复，1 条冲突）
+
+新经验已保存至：~/.claude/homunculus/instincts/inherited/
+
+运行 /instinct-status 查看所有经验。
+```
+
+## 相关指令
+
+- `/instinct-export` - 导出经验文件
+- `/instinct-status` - 查看已学习的经验
+- `/skill-create` - 从 Git 历史生成技能文件

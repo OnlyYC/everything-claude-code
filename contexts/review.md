@@ -1,22 +1,72 @@
-# Code Review Context
+# 代码审查上下文
 
-Mode: PR review, code analysis
-Focus: Quality, security, maintainability
+模式：PR 审查、代码分析
+重点：代码质量、安全性、可维护性
 
-## Behavior
-- Read thoroughly before commenting
-- Prioritize issues by severity (critical > high > medium > low)
-- Suggest fixes, don't just point out problems
-- Check for security vulnerabilities
+## 行为准则
+- 充分阅读后再发表意见
+- 按严重程度排序问题（严重 > 高 > 中 > 低）
+- 给出修复建议，而非仅指出问题
+- 检查安全漏洞
 
-## Review Checklist
-- [ ] Logic errors
-- [ ] Edge cases
-- [ ] Error handling
-- [ ] Security (injection, auth, secrets)
-- [ ] Performance
-- [ ] Readability
-- [ ] Test coverage
+## 审查清单
 
-## Output Format
-Group findings by file, severity first
+### 功能正确性
+- [ ] 业务逻辑正确性
+- [ ] 边界条件处理（空值、空集合、极端值）
+- [ ] 异常处理完整性
+
+### 安全性
+- [ ] SQL 注入风险（MyBatis #{} vs ${}）
+- [ ] XSS 防护（参数校验、输出转义）
+- [ ] 接口权限校验（@PreAuthorize、Sa-Token）
+- [ ] 敏感信息泄露（日志脱敏、密码加密）
+
+### Spring Boot 规范
+- [ ] 分层架构合理（Controller → Service → Mapper）
+- [ ] 事务注解使用正确（@Transactional 加在 Service 层）
+- [ ] 依赖注入规范（优先构造器注入，避免 @Autowired 字段注入）
+- [ ] 全局异常处理
+
+### MyBatis-Plus 规范
+- [ ] 实体类字段与数据库映射正确（@TableField）
+- [ ] 逻辑删除字段配置（@TableLogic）
+- [ ] 分页查询使用正确（Page<T> 分页参数）
+- [ ] 批量操作性能（saveBatch、updateBatch）
+
+### 性能优化
+- [ ] N+1 查询问题（关联查询优化）
+- [ ] 索引使用（Explain 分析）
+- [ ] 缓存使用（@Cacheable、Redis）
+- [ ] 慢查询优化
+
+### 代码规范
+- [ ] 命名规范（类名大驼峰、方法名小驼峰、常量全大写）
+- [ ] 注释完整性（类注释、复杂业务逻辑注释）
+- [ ] 日志记录规范（关键节点日志、异常日志）
+- [ ] 魔法值提取（常量类或枚举）
+
+### 测试覆盖
+- [ ] 单元测试覆盖核心逻辑
+- [ ] 集成测试覆盖接口
+- [ ] 边界场景测试
+
+## 输出格式
+按文件分组，严重程度优先排序
+
+## 常见问题检查点
+
+### Controller 层
+- 参数校验（@Valid、@Validated）
+- 统一返回值封装
+- 接口幂等性（@Idempotent）
+
+### Service 层
+- 业务逻辑封装
+- 事务传播行为配置
+- 并发控制（分布式锁、乐观锁）
+
+### Mapper 层
+- MyBatis-Plus BaseMapper 复用
+- 复杂查询 XML 编写规范
+- 动态 SQL 使用

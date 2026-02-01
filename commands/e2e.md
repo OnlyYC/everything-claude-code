@@ -1,363 +1,164 @@
 ---
-description: Generate and run end-to-end tests with Playwright. Creates test journeys, runs tests, captures screenshots/videos/traces, and uploads artifacts.
+description: Generate and run integration tests with JUnit 5, RestAssured, and TestContainers. Creates API integration tests, runs full stack tests, captures logs, and generates reports.
 ---
 
-# E2E Command
+# 集成测试指令
 
-This command invokes the **e2e-runner** agent to generate, maintain, and execute end-to-end tests using Playwright.
+此指令调用 **integration-test-runner** Agent 来产生、维护和执行使用 JUnit 5 + RestAssured + TestContainers 的集成测试。
 
-## What This Command Does
+## 此指令的功能
 
-1. **Generate Test Journeys** - Create Playwright tests for user flows
-2. **Run E2E Tests** - Execute tests across browsers
-3. **Capture Artifacts** - Screenshots, videos, traces on failures
-4. **Upload Results** - HTML reports and JUnit XML
-5. **Identify Flaky Tests** - Quarantine unstable tests
+1. **生成集成测试用例** - 为 API 接口建立 JUnit 5 测试
+2. **执行集成测试** - 使用真实数据库环境执行测试
+3. **捕获测试产物** - 失败时的日志、SQL 语句、堆栈跟踪
+4. **生成测试报告** - Surefire HTML 报告和 JUnit XML
+5. **识别不稳定测试** - 隔离不稳定的测试
 
-## When to Use
+## 何时使用
 
-Use `/e2e` when:
-- Testing critical user journeys (login, trading, payments)
-- Verifying multi-step flows work end-to-end
-- Testing UI interactions and navigation
-- Validating integration between frontend and backend
-- Preparing for production deployment
+在以下情况使用 `/e2e`：
+- 测试关键业务流程（用户注册、下单、支付）
+- 验证多层级集成（Controller -> Service -> Mapper -> DB）
+- 测试 API 接口契约和响应格式
+- 验证前后端集成
+- 为生产环境部署做准备
 
-## How It Works
+## 运作方式
 
-The e2e-runner agent will:
+integration-test-runner Agent 会：
 
-1. **Analyze user flow** and identify test scenarios
-2. **Generate Playwright test** using Page Object Model pattern
-3. **Run tests** across multiple browsers (Chrome, Firefox, Safari)
-4. **Capture failures** with screenshots, videos, and traces
-5. **Generate report** with results and artifacts
-6. **Identify flaky tests** and recommend fixes
+1. **分析 API 接口**并识别测试场景
+2. **生成 JUnit 5 测试**使用 AAA 模式（Arrange-Act-Assert）
+3. **启动真实环境**（TestContainers MySQL + Redis）
+4. **执行测试**并捕获失败信息
+5. **生成报告**包含结果和产物
+6. **识别不稳定测试**并建议修复
 
-## Example Usage
+## 技术栈
 
-```
-User: /e2e Test the market search and view flow
+- **JUnit 5** - 测试框架
+- **RestAssured** - REST API 测试
+- **TestContainers** - 容器化测试环境（MySQL、Redis）
+- **Mockito** - Mock 外部服务
+- **WireMock** - Mock 第三方 API
+- **Jacoco** - 覆盖率统计
 
-Agent (e2e-runner):
-# E2E Test Generation: Market Search and View Flow
+## 测试产物
 
-## Test Scenario Identified
+测试执行时，会捕获以下产物：
 
-**User Journey:** Market Search → View Results → Click Market → View Details
+**所有测试：**
+- Surefire HTML 报告
+- JUnit XML 用于 CI 集成
 
-**Test Coverage:**
-1. Navigate to markets page
-2. Perform semantic search
-3. Verify search results
-4. Click on first result
-5. Verify market details page loads
-6. Verify chart renders
+**仅在失败时：**
+- 应用日志（logs/application.log）
+- SQL 执行日志
+- HTTP 请求/响应日志
+- 堆栈跟踪
 
-## Generated Test Code
-
-```typescript
-// tests/e2e/markets/search-and-view.spec.ts
-import { test, expect } from '@playwright/test'
-import { MarketsPage } from '../../pages/MarketsPage'
-import { MarketDetailsPage } from '../../pages/MarketDetailsPage'
-
-test.describe('Market Search and View Flow', () => {
-  test('user can search markets and view details', async ({ page }) => {
-    // 1. Navigate to markets page
-    const marketsPage = new MarketsPage(page)
-    await marketsPage.goto()
-
-    // Verify page loaded
-    await expect(page).toHaveTitle(/Markets/)
-    await expect(page.locator('h1')).toContainText('Markets')
-
-    // 2. Perform semantic search
-    await marketsPage.searchMarkets('election')
-
-    // Wait for API response
-    await page.waitForResponse(resp =>
-      resp.url().includes('/api/markets/search') && resp.status() === 200
-    )
-
-    // 3. Verify search results
-    const marketCards = marketsPage.marketCards
-    await expect(marketCards.first()).toBeVisible()
-    const resultCount = await marketCards.count()
-    expect(resultCount).toBeGreaterThan(0)
-
-    // Take screenshot of search results
-    await page.screenshot({ path: 'artifacts/search-results.png' })
-
-    // 4. Click on first result
-    const firstMarketTitle = await marketCards.first().textContent()
-    await marketCards.first().click()
-
-    // 5. Verify market details page loads
-    await expect(page).toHaveURL(/\/markets\/[a-z0-9-]+/)
-
-    const detailsPage = new MarketDetailsPage(page)
-    await expect(detailsPage.marketName).toBeVisible()
-    await expect(detailsPage.marketDescription).toBeVisible()
-
-    // 6. Verify chart renders
-    await expect(detailsPage.priceChart).toBeVisible()
-
-    // Verify market name matches
-    const detailsTitle = await detailsPage.marketName.textContent()
-    expect(detailsTitle?.toLowerCase()).toContain(
-      firstMarketTitle?.toLowerCase().substring(0, 20) || ''
-    )
-
-    // Take screenshot of market details
-    await page.screenshot({ path: 'artifacts/market-details.png' })
-  })
-
-  test('search with no results shows empty state', async ({ page }) => {
-    const marketsPage = new MarketsPage(page)
-    await marketsPage.goto()
-
-    // Search for non-existent market
-    await marketsPage.searchMarkets('xyznonexistentmarket123456')
-
-    // Verify empty state
-    await expect(page.locator('[data-testid="no-results"]')).toBeVisible()
-    await expect(page.locator('[data-testid="no-results"]')).toContainText(
-      /no.*results|no.*markets/i
-    )
-
-    const marketCount = await marketsPage.marketCards.count()
-    expect(marketCount).toBe(0)
-  })
-
-  test('can clear search and see all markets again', async ({ page }) => {
-    const marketsPage = new MarketsPage(page)
-    await marketsPage.goto()
-
-    // Initial market count
-    const initialCount = await marketsPage.marketCards.count()
-
-    // Perform search
-    await marketsPage.searchMarkets('trump')
-    await page.waitForLoadState('networkidle')
-
-    // Verify filtered results
-    const filteredCount = await marketsPage.marketCards.count()
-    expect(filteredCount).toBeLessThan(initialCount)
-
-    // Clear search
-    await marketsPage.searchInput.clear()
-    await page.waitForLoadState('networkidle')
-
-    // Verify all markets shown again
-    const finalCount = await marketsPage.marketCards.count()
-    expect(finalCount).toBe(initialCount)
-  })
-})
-```
-
-## Running Tests
+## 查看产物
 
 ```bash
-# Run the generated test
-npx playwright test tests/e2e/markets/search-and-view.spec.ts
+# 在浏览器查看 Surefire 报告
+open target/site/surefire-report.html
 
-Running 3 tests using 3 workers
+# 查看 Jacoco 覆盖率报告
+open target/site/jacoco/index.html
 
-  ✓  [chromium] › search-and-view.spec.ts:5:3 › user can search markets and view details (4.2s)
-  ✓  [chromium] › search-and-view.spec.ts:52:3 › search with no results shows empty state (1.8s)
-  ✓  [chromium] › search-and-view.spec.ts:67:3 › can clear search and see all markets again (2.9s)
-
-  3 passed (9.1s)
-
-Artifacts generated:
-- artifacts/search-results.png
-- artifacts/market-details.png
-- playwright-report/index.html
+# 查看测试日志
+cat target/logs/application.log
 ```
 
-## Test Report
+## 最佳实践
 
-```
-╔══════════════════════════════════════════════════════════════╗
-║                    E2E Test Results                          ║
-╠══════════════════════════════════════════════════════════════╣
-║ Status:     ✅ ALL TESTS PASSED                              ║
-║ Total:      3 tests                                          ║
-║ Passed:     3 (100%)                                         ║
-║ Failed:     0                                                ║
-║ Flaky:      0                                                ║
-║ Duration:   9.1s                                             ║
-╚══════════════════════════════════════════════════════════════╝
+**应该做：**
+- 使用 TestContainers 启动真实数据库
+- 使用 AAA 模式组织测试代码
+- 测试 API 接口而非实现细节
+- 测试正常流程和异常流程
+- 使用 @Transactional 回滚测试数据
+- 使用随机端口避免端口冲突
 
-Artifacts:
-📸 Screenshots: 2 files
-📹 Videos: 0 files (only on failure)
-🔍 Traces: 0 files (only on failure)
-📊 HTML Report: playwright-report/index.html
+**不应该做：**
+- 直接测试 Service 层（应通过 API 测试）
+- 对生产环境执行测试
+- 忽略不稳定的测试
+- 用集成测试覆盖所有边界情况（使用单元测试）
+- 硬编码测试数据（使用测试数据构建器）
 
-View report: npx playwright show-report
-```
-
-✅ E2E test suite ready for CI/CD integration!
-```
-
-## Test Artifacts
-
-When tests run, the following artifacts are captured:
-
-**On All Tests:**
-- HTML Report with timeline and results
-- JUnit XML for CI integration
-
-**On Failure Only:**
-- Screenshot of the failing state
-- Video recording of the test
-- Trace file for debugging (step-by-step replay)
-- Network logs
-- Console logs
-
-## Viewing Artifacts
+## 快速指令
 
 ```bash
-# View HTML report in browser
-npx playwright show-report
+# 执行所有集成测试
+mvn verify
 
-# View specific trace file
-npx playwright show-trace artifacts/trace-abc123.zip
+# 执行特定测试类
+mvn test -Dtest=UserControllerIntegrationTest
 
-# Screenshots are saved in artifacts/ directory
-open artifacts/search-results.png
+# 执行特定测试方法
+mvn test -Dtest=UserControllerIntegrationTest#testCreateUser
+
+# 跳过集成测试
+mvn package -DskipITs
+
+# 只执行集成测试
+mvn verify -DskipUnitTests
+
+# 生成覆盖率报告
+mvn verify jacoco:report
 ```
 
-## Flaky Test Detection
+## 测试示例
 
-If a test fails intermittently:
+```java
+@SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
+@Testcontainers
+class UserControllerIntegrationTest {
 
-```
-⚠️  FLAKY TEST DETECTED: tests/e2e/markets/trade.spec.ts
+    @Container
+    static MySQLContainer<?> mysql = new MySQLContainer<>("mysql:8.0");
 
-Test passed 7/10 runs (70% pass rate)
+    @Container
+    static GenericContainer<?> redis = new GenericContainer<>("redis:7-alpine")
+            .withExposedPorts(6379);
 
-Common failure:
-"Timeout waiting for element '[data-testid="confirm-btn"]'"
+    @Autowired
+    private TestRestTemplate restTemplate;
 
-Recommended fixes:
-1. Add explicit wait: await page.waitForSelector('[data-testid="confirm-btn"]')
-2. Increase timeout: { timeout: 10000 }
-3. Check for race conditions in component
-4. Verify element is not hidden by animation
+    @Test
+    @DisplayName("创建用户 - 成功")
+    void createUser_Success() {
+        // Arrange
+        CreateUserRequest request = CreateUserRequest.builder()
+                .username("testuser")
+                .password("Password123")
+                .email("test@example.com")
+                .build();
 
-Quarantine recommendation: Mark as test.fixme() until fixed
-```
+        // Act
+        ResponseEntity<Result<UserVO>> response = restTemplate.postForEntity(
+                "/api/users",
+                request,
+                new ParameterizedTypeReference<>() {}
+        );
 
-## Browser Configuration
-
-Tests run on multiple browsers by default:
-- ✅ Chromium (Desktop Chrome)
-- ✅ Firefox (Desktop)
-- ✅ WebKit (Desktop Safari)
-- ✅ Mobile Chrome (optional)
-
-Configure in `playwright.config.ts` to adjust browsers.
-
-## CI/CD Integration
-
-Add to your CI pipeline:
-
-```yaml
-# .github/workflows/e2e.yml
-- name: Install Playwright
-  run: npx playwright install --with-deps
-
-- name: Run E2E tests
-  run: npx playwright test
-
-- name: Upload artifacts
-  if: always()
-  uses: actions/upload-artifact@v3
-  with:
-    name: playwright-report
-    path: playwright-report/
+        // Assert
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody().getCode()).isEqualTo(200);
+        assertThat(response.getBody().getData().getUsername()).isEqualTo("testuser");
+    }
+}
 ```
 
-## PMX-Specific Critical Flows
+## 与其他指令的整合
 
-For PMX, prioritize these E2E tests:
+- 使用 `/plan` 识别要测试的关键业务流程
+- 使用 `/tdd` 进行单元测试（更快、更细粒度）
+- 使用 `/code-review` 验证测试质量
+- 使用 `/test-coverage` 验证整体覆盖率
 
-**🔴 CRITICAL (Must Always Pass):**
-1. User can connect wallet
-2. User can browse markets
-3. User can search markets (semantic search)
-4. User can view market details
-5. User can place trade (with test funds)
-6. Market resolves correctly
-7. User can withdraw funds
+## 相关 Agent
 
-**🟡 IMPORTANT:**
-1. Market creation flow
-2. User profile updates
-3. Real-time price updates
-4. Chart rendering
-5. Filter and sort markets
-6. Mobile responsive layout
-
-## Best Practices
-
-**DO:**
-- ✅ Use Page Object Model for maintainability
-- ✅ Use data-testid attributes for selectors
-- ✅ Wait for API responses, not arbitrary timeouts
-- ✅ Test critical user journeys end-to-end
-- ✅ Run tests before merging to main
-- ✅ Review artifacts when tests fail
-
-**DON'T:**
-- ❌ Use brittle selectors (CSS classes can change)
-- ❌ Test implementation details
-- ❌ Run tests against production
-- ❌ Ignore flaky tests
-- ❌ Skip artifact review on failures
-- ❌ Test every edge case with E2E (use unit tests)
-
-## Important Notes
-
-**CRITICAL for PMX:**
-- E2E tests involving real money MUST run on testnet/staging only
-- Never run trading tests against production
-- Set `test.skip(process.env.NODE_ENV === 'production')` for financial tests
-- Use test wallets with small test funds only
-
-## Integration with Other Commands
-
-- Use `/plan` to identify critical journeys to test
-- Use `/tdd` for unit tests (faster, more granular)
-- Use `/e2e` for integration and user journey tests
-- Use `/code-review` to verify test quality
-
-## Related Agents
-
-This command invokes the `e2e-runner` agent located at:
-`~/.claude/agents/e2e-runner.md`
-
-## Quick Commands
-
-```bash
-# Run all E2E tests
-npx playwright test
-
-# Run specific test file
-npx playwright test tests/e2e/markets/search.spec.ts
-
-# Run in headed mode (see browser)
-npx playwright test --headed
-
-# Debug test
-npx playwright test --debug
-
-# Generate test code
-npx playwright codegen http://localhost:3000
-
-# View report
-npx playwright show-report
-```
+此指令调用位于以下位置的 `integration-test-runner` Agent：
+`~/.claude/agents/integration-test-runner.md`
