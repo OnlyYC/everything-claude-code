@@ -11,32 +11,82 @@ model: glm-4.7
 
 ## 核心职责
 
-1. 诊断 Java 编译错误
-2. 修复 Maven 依赖问题
-3. 解决 Jakarta EE 命名空间问题
-4. 处理类型错误和接口不匹配
-5. 修复 MyBatis mapper 配置问题
+1. **诊断 Java 编译错误** - 解析编译错误信息，定位问题根源
+2. **修复 Maven 依赖问题** - 解决依赖冲突、版本不兼容
+3. **解决 Jakarta EE 命名空间问题** - javax 到 jakarta 的迁移
+4. **处理类型错误和接口不匹配** - 修复类型转换、方法签名问题
+5. **修复 MyBatis mapper 配置问题** - 解决 XML 映射错误
+
+## 触发条件
+
+**主动使用时机：**
+- `mvn clean compile` 失败
+- `mvn clean install` 失败
+- IDE 显示编译错误
+- 依赖冲突导致构建失败
+- 运行时 ClassNotFoundException
+- 运行时 NoSuchMethodError
+
+**不使用场景：**
+- 逻辑错误（运行时异常而非编译错误）
+- 测试失败（使用 tdd-guide 或 e2e-runner）
+- 代码质量警告（使用 java-reviewer）
 
 ## 诊断命令
 
 ```bash
-# 基本构建检查
+# ===== 基本构建检查 =====
+# 编译检查
 mvn clean compile
 
 # 完整构建（含测试）
 mvn clean install
 
-# 检查依赖树
+# 跳过测试构建
+mvn clean install -DskipTests
+
+# 打包
+mvn clean package
+
+# ===== 依赖分析 =====
+# 查看依赖树
 mvn dependency:tree
 
-# 分析依赖冲突
+# 分析未使用的依赖
 mvn dependency:analyze
 
+# 查看依赖冲突
+mvn dependency:tree -Dverbose
+
+# 解析依赖（显示冲突）
+mvn dependency:tree -Dverbose | grep "conflict"
+
+# ===== 版本检查 =====
 # 检查插件更新
 mvn versions:display-plugin-updates
 
 # 检查依赖更新
 mvn versions:display-dependency-updates
+
+# 检查父 POM 更新
+mvn versions:display-parent-updates
+
+# ===== 详细编译信息 =====
+# 显示详细编译错误
+mvn clean compile -X
+
+# 显示编译调试信息
+mvn clean compile -e
+
+# ===== 清理命令 =====
+# 清理本地仓库缓存
+rm -rf ~/.m2/repository/*/
+
+# 清理项目缓存
+mvn clean
+
+# 重新下载依赖
+mvn dependency:purge-local-repository
 ```
 
 ## 常见错误模式与修复
@@ -46,6 +96,15 @@ mvn versions:display-dependency-updates
 **错误**: `找不到符号: 类 Xxx` 或 `找不到符号: 方法 xxx()`
 
 **原因**: 缺少 import、类名拼写错误、依赖未引入
+
+**诊断**:
+```bash
+# 查找类是否存在于依赖中
+mvn dependency:tree | grep ClassName
+
+# 搜索项目中是否有该类
+find src -name "*.java" -exec grep -l "class Xxx" {} \;
+```
 
 **修复**:
 ```java
@@ -62,6 +121,15 @@ userList  → getUserList()
 **错误**: `程序包 javax.servlet 不存在` / `程序包 javax.persistence 不存在`
 
 **原因**: Spring Boot 3 已迁移到 Jakarta EE 命名空间
+
+**诊断**:
+```bash
+# 检查是否使用了 javax
+grep -r "import javax\." src/
+
+# 检查 Spring Boot 版本
+grep -A 3 "spring-boot-starter-parent" pom.xml
+```
 
 **修复**:
 ```java
@@ -125,6 +193,15 @@ public void process(String id) { }  // 签名必须一致
 ### 5. 依赖冲突
 
 **错误**: `程序包 xxx 存在于多个 jar 中` / `NoSuchMethodError`
+
+**诊断**:
+```bash
+# 查找冲突的依赖
+mvn dependency:tree -Dverbose | grep "conflict"
+
+# 查看特定类的来源
+mvn dependency:tree -Dincludes=groupId:artifactId
+```
 
 **修复**:
 ```xml
@@ -216,6 +293,18 @@ List<?> list = object;
 ### 10. MyBatis Mapper 绑定错误
 
 **错误**: `Invalid bound statement (not found): XxxMapper.methodName`
+
+**诊断**:
+```bash
+# 检查 XML 文件是否存在
+find src -resources -name "*Mapper.xml"
+
+# 检查 namespace 配置
+grep -r "namespace=" src/main/resources/mapper/
+
+# 检查 application.yml 配置
+grep -A 5 "mybatis:" src/main/resources/application.yml
+```
 
 **修复**:
 ```xml
@@ -350,21 +439,86 @@ public class User {
 最终总结：
 
 ```
-构建状态: 成功/失败
-已修复错误: N
-已修复警告: N
-修改文件: 列表
-剩余问题: 列表（如有）
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          构建修复报告
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+构建状态: ✅ 成功
+
+修复统计:
+  - 已修复错误: 12
+  - 已修复警告: 5
+  - 修改文件: 8 个
+
+修改文件列表:
+  1. src/main/java/service/UserService.java
+  2. src/main/java/controller/UserController.java
+  3. src/main/java/mapper/UserMapper.java
+  4. pom.xml
+  ...
+
+修复详情:
+  [✓] javax → jakarta 命名空间迁移 (5 个文件)
+  [✓] 添加缺失的依赖 (fastjson 2.x)
+  [✓] 修复类型转换错误 (3 处)
+  [✓] 字段注入 → 构造函数注入 (2 处)
+  [✓] 未使用的导入清理 (7 处)
+
+验证结果:
+  - mvn clean compile: ✅ 通过
+  - mvn clean install: ✅ 通过
+  - mvn test: ✅ 通过
+
+构建时间: 2分35秒
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
 ## 项目特定检查
 
 基于 Java 21 + Spring Boot 3 + MyBatis-Plus：
-- **Java 21** 目标版本 - 检查 `maven.compiler.source/target`
-- **Spring Boot 3.2.x+** - 确保 `jakarta.*` 命名空间
-- **MyBatis-Plus 3.5.x+** - 检查版本兼容性
-- **Lombok** - 确保 `annotationProcessorPaths` 配置正确
+
+| 检查项 | 期望值 | 验证命令 |
+|--------|--------|----------|
+| Java 版本 | 21 | `grep -A 1 "maven.compiler.source" pom.xml` |
+| Spring Boot | 3.2.x+ | `grep -A 3 "spring-boot-starter-parent" pom.xml` |
+| MyBatis-Plus | 3.5.x+ | `grep mybatis-plus pom.xml` |
+| Lombok | 正确配置 | `grep -A 5 "annotationProcessorPaths" pom.xml` |
+| 命名空间 | jakarta.* | `grep -r "import javax\." src/` 应为空 |
+
+## 快速修复命令
+
+```bash
+# 一键修复 javax → jakarta
+find src -name "*.java" -exec sed -i 's/import javax\./import jakarta./g' {} \;
+
+# 清理并重新构建
+mvn clean install -U -DskipTests
+
+# 查看编译错误的详细堆栈
+mvn clean compile -X | grep -A 10 "ERROR"
+```
+
+## 与其他 Agent 协作
+
+| Agent | 协作场景 | 交接方式 |
+|-------|----------|----------|
+| java-reviewer | 修复后代码质量审查 | 修复完成后调用 java-reviewer 检查 |
+| tdd-guide | 修复后运行测试 | 构建成功后运行测试验证 |
+| security-reviewer | 修复后的安全检查 | 如果修复涉及认证/授权代码 |
+| mysql-reviewer | MyBatis 相关错误修复 | Mapper/XML 问题共同解决 |
+
+## 常见构建错误速查表
+
+| 错误信息 | 原因 | 快速修复 |
+|----------|------|----------|
+| `找不到符号` | 缺少 import 或依赖 | 添加 import 或依赖 |
+| `程序包 javax.* 不存在` | Spring Boot 3 迁移 | javax → jakarta |
+| `类型不兼容` | 类型转换问题 | 添加类型转换 |
+| `缺少返回语句` | 方法无返回 | 添加 return |
+| `无效的绑定语句` | MyBatis XML 配置 | 检查 namespace 和路径 |
+| `NoSuchMethodError` | 依赖冲突 | 排除或指定版本 |
+| `ClassNotFoundException` | 缺少依赖 | 添加依赖 |
 
 ---
 
-**原则**: 构建错误应该精确修复。目标是能成功构建，而非重构整个代码库。
+**原则**: 构建错误应该精确修复。目标是能成功构建，而非重构整个代码库。每次只修复一个错误，然后验证，避免引入新问题。
