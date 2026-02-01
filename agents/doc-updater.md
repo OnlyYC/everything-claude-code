@@ -620,6 +620,37 @@ java -jar target/[project-name].jar
 | planner | 实现完成后更新文档 | 根据实现变更更新文档 |
 | java-reviewer | 代码审查后更新文档 | 根据审查建议更新示例 |
 | e2e-runner | 测试完成后更新 API 文档 | 根据测试结果验证文档 |
+| mysql-reviewer | 数据库变更后更新 | 更新表结构文档和数据模型 |
+| refactor-cleaner | 重构后更新文档 | 删除废弃的 API 文档，更新代码地图 |
+| security-reviewer | 安全变更后更新 | 更新认证/授权相关文档 |
+| build-error-resolver | 构建配置变更 | 更新环境配置文档 |
+| tdd-guide | 测试结构变更 | 更新测试策略文档 |
+
+**文档更新工作流协作示例：**
+```
+1. architect：完成架构设计
+    ↓
+2. doc-updater：生成初始代码地图
+    ↓
+3. planner：制定实现计划
+    ↓
+4. tdd-guide：编写测试
+    ↓
+5. 开发实现
+    ↓
+6. java-reviewer：代码审查
+    ↓
+7. e2e-runner：验证功能
+    ↓
+8. doc-updater：更新最终文档（代码地图、API 文档）
+```
+
+**触发时机：**
+- 新增/删除 Controller/Service/Mapper
+- API 端点变更
+- 数据库表结构变更
+- 架构重大调整
+- 定期维护（每周/发版前）
 
 ## 文档生成示例
 

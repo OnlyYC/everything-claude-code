@@ -305,10 +305,27 @@ find src/test -name "*Test.java" | grep -i "user"
 | Agent | 协作场景 | 交接方式 |
 |-------|----------|----------|
 | architect | 大型功能需要架构设计 | 先用 architect 设计，再用 planner 拆解 |
-| code-reviewer | 规划完成后审查实现方案 | 将规划结果提交 code-reviewer |
+| java-reviewer | 规划完成后审查实现方案 | 将规划结果提交 java-reviewer |
 | tdd-guide | 需要编写测试 | 规划中包含测试步骤 |
 | build-error-resolver | 实现遇到构建错误 | 切换到 build-error-resolver |
 | security-reviewer | 涉及敏感数据 | 规划中包含安全审查步骤 |
+| e2e-runner | 验证完整功能流程 | 规划中定义 E2E 测试场景 |
+| mysql-reviewer | 数据库相关变更 | 规划中包含数据库迁移步骤 |
+
+**规划工作流协作示例：**
+```
+1. architect：架构设计（大型功能）
+    ↓
+2. planner：制定实现计划
+    ↓
+3. java-reviewer：审查实现方案可行性
+    ↓
+4. tdd-guide：编写测试（TDD 流程）
+    ↓
+5. 开发实现
+    ↓
+6. e2e-runner：验证完整功能
+```
 
 ## 决策记录（ADR）模板
 
