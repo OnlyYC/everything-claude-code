@@ -10,8 +10,10 @@ model: opus
 **技术栈**: Java 21 + Spring Boot 3 + Spring MVC + MyBatis 3 + MyBatis-Plus + Maven + MySQL
 
 当被调用时：
-1. 运行 git diff 查看最近变更
-2. 重点关注被修改的文件
+1. 检查是否传入文件路径参数
+   - 如果有参数（如 `src/main/java/xxx.java` 或 `src/main/java/`），审查指定的文件或目录
+   - 如果无参数，运行 `git diff` 查看最近变更
+2. 重点关注被指定的文件或被修改的文件
 3. 立即开始审查
 
 ## 审查清单

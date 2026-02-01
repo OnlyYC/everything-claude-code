@@ -14,6 +14,19 @@ description: Comprehensive Java code review for Spring Boot patterns, concurrenc
 4. **并发审查**：分析线程安全性、synchronized 使用、并发集合
 5. **生成报告**：按严重性分类问题
 
+## 使用方法
+
+```bash
+# 审查 git 变更的文件
+/java-review
+
+# 审查指定文件
+/java-review src/main/java/com/example/UserService.java
+
+# 审查指定目录
+/java-review src/main/java/com/example/
+```
+
 ## 何时使用
 
 在以下情况使用 `/java-review`：
