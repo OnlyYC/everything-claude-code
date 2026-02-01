@@ -1,29 +1,39 @@
 ---
 name: evolve
 description: 将关联经验聚合为技能、指令或智能体
-command: true
+command: /evolve [--execute|--dry-run] [--domain <名称>] [--threshold <n>]
 ---
 
 # 经验聚合指令
-
-## 实现方式
-
-使用插件根目录运行经验 CLI 工具：
-
-```bash
-python3 "${CLAUDE_PLUGIN_ROOT}/skills/continuous-learning-v2/scripts/instinct-cli.py" evolve [--generate]
-```
-
-如果 `CLAUDE_PLUGIN_ROOT` 未设置（手动安装），使用：
-
-```bash
-python3 ~/.claude/skills/continuous-learning-v2/scripts/instinct-cli.py evolve [--generate]
-```
 
 分析经验并将相关的聚合为更高级的结构：
 - **指令**：当经验描述用户主动调用的操作时
 - **技能**：当经验描述自动触发的行为时
 - **智能体**：当经验描述复杂的多步骤流程时
+
+## 前置条件
+
+需要安装 **continuous-learning-v2** 技能，确保以下 CLI 工具可用：
+
+**Windows (PowerShell):**
+```powershell
+# 检查工具是否安装
+python3 "$env:CLAUDE_PLUGIN_ROOT\skills\continuous-learning-v2\scripts\instinct-cli.py" --help
+
+# 或使用默认路径
+python3 ~/.claude/skills/continuous-learning-v2/scripts/instinct-cli.py --help
+```
+
+**macOS/Linux:**
+```bash
+# 检查工具是否安装
+python3 "${CLAUDE_PLUGIN_ROOT}/skills/continuous-learning-v2/scripts/instinct-cli.py" --help
+
+# 或使用默认路径
+python3 ~/.claude/skills/continuous-learning-v2/scripts/instinct-cli.py --help
+```
+
+如果未安装，请先安装 continuous-learning-v2 技能。
 
 ## 使用方法
 

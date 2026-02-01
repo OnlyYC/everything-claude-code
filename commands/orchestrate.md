@@ -1,3 +1,9 @@
+---
+name: orchestrate
+description: 复杂任务的循序 Agent 工作流程
+command: /orchestrate [feature|bugfix|refactor|security|custom] [task-description]
+---
+
 # Orchestrate 指令
 
 复杂任务的循序 Agent 工作流程。
@@ -11,19 +17,19 @@
 ### feature
 完整的功能实现工作流程：
 ```
-planner -> tdd-guide -> code-reviewer -> java-reviewer
+planner -> java-tdd-guide -> code-reviewer -> java-reviewer
 ```
 
 ### bugfix
 Bug 调查和修复工作流程：
 ```
-explorer -> tdd-guide -> code-reviewer
+explorer -> java-tdd-guide -> code-reviewer
 ```
 
 ### refactor
 安全重构工作流程：
 ```
-architect -> code-reviewer -> tdd-guide
+architect -> code-reviewer -> java-tdd-guide
 ```
 
 ### security
@@ -71,7 +77,7 @@ Agent 之间，建立交接文档：
 ====================
 工作流程：feature
 任务：新增用户认证模块
-Agents：planner -> tdd-guide -> code-reviewer -> java-reviewer
+Agents：planner -> java-tdd-guide -> code-reviewer -> java-reviewer
 
 摘要
 -------
@@ -80,7 +86,7 @@ Agents：planner -> tdd-guide -> code-reviewer -> java-reviewer
 AGENT 输出
 -------------
 Planner：[摘要]
-TDD Guide：[摘要]
+Java TDD Guide：[摘要]
 Code Reviewer：[摘要]
 Java Reviewer：[摘要]
 
@@ -118,23 +124,32 @@ Java Reviewer：[摘要]
 
 ## 参数
 
-$ARGUMENTS:
-- `feature <description>` - 完整功能工作流程
-- `bugfix <description>` - Bug 修复工作流程
-- `refactor <description>` - 重构工作流程
-- `security <description>` - 安全性审查工作流程
-- `custom <agents> <description>` - 自定义 Agent 序列
+| 参数 | 说明 |
+|------|------|
+| `feature <description>` | 完整功能工作流程 |
+| `bugfix <description>` | Bug 修复工作流程 |
+| `refactor <description>` | 重构工作流程 |
+| `security <description>` | 安全性审查工作流程 |
+| `custom <agents> <description>` | 自定义 Agent 序列 |
 
 ## 自定义工作流程示例
 
 ```
-/orchestrate custom "architect,tdd-guide,code-reviewer" "重新设计缓存层"
+/orchestrate custom "architect,java-tdd-guide,code-reviewer" "重新设计缓存层"
 ```
 
 ## 提示
 
-1. **复杂功能从 planner 开始**
+1. **复杂功能从 `/plan` 开始**
 2. **合并前总是包含 code-reviewer**
 3. **对验证/支付/PII 使用 java-reviewer**
 4. **保持交接简洁** - 专注于下一个 Agent 需要的内容
 5. **如有需要，在 Agents 之间执行 verification**
+
+## 相关指令
+
+- `/plan` - 创建实现计划
+- `/tdd` - 测试驱动开发
+- `/code-review` - 代码审查
+- `/java-review` - Java 特定审查
+- `/verify` - 完整验证循环

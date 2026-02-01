@@ -1,26 +1,36 @@
 ---
 name: instinct-status
 description: 显示所有已学习的经验及其置信度
-command: true
+command: /instinct-status [--domain <名称>] [--low-confidence] [--high-confidence] [--source <类型>] [--json]
 ---
 
 # 经验状态指令
 
 按领域分组显示所有已学习的经验及其置信度分数。
 
-## 实现方式
+## 前置条件
 
-使用插件根目录运行经验 CLI 工具：
+需要安装 **continuous-learning-v2** 技能，确保以下 CLI 工具可用：
 
-```bash
-python3 "${CLAUDE_PLUGIN_ROOT}/skills/continuous-learning-v2/scripts/instinct-cli.py" status
+**Windows (PowerShell):**
+```powershell
+# 检查工具是否安装
+python3 "$env:CLAUDE_PLUGIN_ROOT\skills\continuous-learning-v2\scripts\instinct-cli.py" --help
+
+# 或使用默认路径
+python3 ~/.claude/skills/continuous-learning-v2/scripts/instinct-cli.py --help
 ```
 
-如果 `CLAUDE_PLUGIN_ROOT` 未设置（手动安装），使用：
-
+**macOS/Linux:**
 ```bash
-python3 ~/.claude/skills/continuous-learning-v2/scripts/instinct-cli.py status
+# 检查工具是否安装
+python3 "${CLAUDE_PLUGIN_ROOT}/skills/continuous-learning-v2/scripts/instinct-cli.py" --help
+
+# 或使用默认路径
+python3 ~/.claude/skills/continuous-learning-v2/scripts/instinct-cli.py --help
 ```
+
+如果未安装，请先安装 continuous-learning-v2 技能。
 
 ## 使用方法
 
@@ -48,7 +58,7 @@ python3 ~/.claude/skills/continuous-learning-v2/scripts/instinct-cli.py status
 触发时机：编写业务逻辑时
 动作：业务逻辑必须通过 Service 层，Controller 不可直接调用 Mapper
 置信度：████████░░ 80%
-来源：session-observation | 最后更新：2025-01-22
+来源：session-observation | 最后更新：2025-01-22  # 示例日期
 
 ### dto-vo-separation
 触发时机：定义接口参数时

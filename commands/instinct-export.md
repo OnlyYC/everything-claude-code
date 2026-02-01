@@ -1,7 +1,7 @@
 ---
 name: instinct-export
 description: 导出经验文件，与团队成员共享或迁移到其他项目
-command: /instinct-export
+command: /instinct-export [--domain <名称>] [--min-confidence <值>] [--output <文件>] [--format <yaml|json|md>] [--include-evidence]
 ---
 
 # 经验导出指令
@@ -36,7 +36,7 @@ command: /instinct-export
 
 ```yaml
 # 经验导出文件
-# 生成时间：2025-01-22
+# 生成时间：2025-01-22  # 使用实际导出日期
 # 来源：personal
 # 数量：12 条经验
 
@@ -130,7 +130,7 @@ instincts:
 ### 项目交接
 
 ```bash
-# 导出所有经验用于交接
+# 导出所有经验用于交接（使用当前日期）
 /instinct-export --output project-handover-20250122.yaml
 ```
 

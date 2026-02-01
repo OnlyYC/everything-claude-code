@@ -1,5 +1,7 @@
 ---
-description: Generate and run integration tests with JUnit 5, RestAssured, and TestContainers. Creates API integration tests, runs full stack tests, captures logs, and generates reports.
+name: e2e
+description: 生成并执行集成测试（JUnit 5 + RestAssured + TestContainers）
+command: /e2e
 ---
 
 # 集成测试指令
@@ -59,6 +61,19 @@ integration-test-runner Agent 会：
 
 ## 查看产物
 
+**Windows (PowerShell):**
+```powershell
+# 在浏览器查看 Surefire 报告
+start target/site/surefire-report.html
+
+# 查看 Jacoco 覆盖率报告
+start target/site/jacoco/index.html
+
+# 查看测试日志
+Get-Content target/logs/application.log
+```
+
+**macOS/Linux:**
 ```bash
 # 在浏览器查看 Surefire 报告
 open target/site/surefire-report.html
@@ -90,22 +105,22 @@ cat target/logs/application.log
 ## 快速指令
 
 ```bash
-# 执行所有集成测试
+# 执行所有集成测试（跨平台通用）
 mvn verify
 
-# 执行特定测试类
+# 执行特定测试类（跨平台通用）
 mvn test -Dtest=UserControllerIntegrationTest
 
-# 执行特定测试方法
+# 执行特定测试方法（跨平台通用）
 mvn test -Dtest=UserControllerIntegrationTest#testCreateUser
 
-# 跳过集成测试
+# 跳过集成测试（跨平台通用）
 mvn package -DskipITs
 
-# 只执行集成测试
+# 只执行集成测试（跨平台通用）
 mvn verify -DskipUnitTests
 
-# 生成覆盖率报告
+# 生成覆盖率报告（跨平台通用）
 mvn verify jacoco:report
 ```
 
@@ -162,3 +177,10 @@ class UserControllerIntegrationTest {
 
 此指令调用位于以下位置的 `integration-test-runner` Agent：
 `~/.claude/agents/integration-test-runner.md`
+
+## 相关指令
+
+- `/tdd` - 单元测试（更快、更细粒度）
+- `/java-test` - Java 单元测试指令
+- `/test-coverage` - 验证整体覆盖率
+- `/verify` - 执行完整验证循环

@@ -1,10 +1,16 @@
+---
+name: checkpoint
+description: 在工作流程中建立或验证检查点
+command: /checkpoint [create|verify|list|clear] [name]
+---
+
 # Checkpoint 指令
 
 在您的工作流程中建立或验证检查点。
 
 ## 使用方式
 
-`/checkpoint [create|verify|list] [name]`
+`/checkpoint [create|verify|list|clear] [name]`
 
 ## 建立检查点
 
@@ -14,6 +20,14 @@
 2. 使用检查点名称建立 git stash 或 commit
 3. 将检查点记录到 `.claude/checkpoints.log`：
 
+**Windows (PowerShell):**
+```powershell
+$timestamp = Get-Date -Format "yyyy-MM-dd-HH:mm"
+$sha = git rev-parse --short HEAD
+"$timestamp | $CHECKPOINT_NAME | $sha" | Out-File -Append -Encoding utf8 -FilePath .claude/checkpoints.log
+```
+
+**macOS/Linux:**
 ```bash
 echo "$(date +%Y-%m-%d-%H:%M) | $CHECKPOINT_NAME | $(git rev-parse --short HEAD)" >> .claude/checkpoints.log
 ```
@@ -67,8 +81,15 @@ echo "$(date +%Y-%m-%d-%H:%M) | $CHECKPOINT_NAME | $(git rev-parse --short HEAD)
 
 ## 参数
 
-$ARGUMENTS:
-- `create <name>` - 建立命名检查点
-- `verify <name>` - 针对命名检查点验证
-- `list` - 显示所有检查点
-- `clear` - 移除旧检查点（保留最后 5 个）
+| 参数 | 说明 |
+|------|------|
+| `create <name>` | 建立命名检查点 |
+| `verify <name>` | 针对命名检查点验证 |
+| `list` | 显示所有检查点 |
+| `clear` | 移除旧检查点（保留最后 5 个） |
+
+## 相关指令
+
+- `/verify` - 执行快速验证
+- `/learn` - 从检查点间变更提取经验
+- `/skill-create` - 生成技能文件

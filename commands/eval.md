@@ -1,3 +1,9 @@
+---
+name: eval
+description: 管理评估驱动开发工作流程
+command: /eval [define|check|report|list|clean] [feature-name]
+---
+
 # Eval 指令
 
 管理评估驱动开发工作流程。
@@ -16,7 +22,7 @@
 
 ```markdown
 ## EVAL: feature-name
-建立日期：$(date)
+建立日期：2025-01-22  # 或使用当前日期
 
 ### 能力 Evals
 - [ ] [能力 1 的描述]
@@ -67,7 +73,7 @@ EVAL 检查：feature-name
 ```
 EVAL 报告：feature-name
 =========================
-产生日期：$(date)
+产生日期：2025-01-22  # 或使用当前日期
 
 能力 EVALS
 ----------------
@@ -112,9 +118,16 @@ feature-export    [0/4 通过] 未开始
 
 ## 参数
 
-$ARGUMENTS:
-- `define <name>` - 建立新的 eval 定义
-- `check <name>` - 执行并检查 evals
-- `report <name>` - 产生完整报告
-- `list` - 显示所有 evals
-- `clean` - 移除旧的 eval 日志（保留最后 10 次执行）
+| 参数 | 说明 |
+|------|------|
+| `define <name>` | 建立新的 eval 定义 |
+| `check <name>` | 执行并检查 evals |
+| `report <name>` | 产生完整报告 |
+| `list` | 显示所有 evals |
+| `clean` | 移除旧的 eval 日志（保留最后 10 次执行） |
+
+## 相关指令
+
+- `/tdd` - 测试驱动开发
+- `/test-coverage` - 验证测试覆盖率
+- `/verify` - 执行完整验证循环

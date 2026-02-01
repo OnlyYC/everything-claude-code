@@ -1,3 +1,9 @@
+---
+name: update-codemaps
+description: 分析代码库结构并更新架构文档
+command: /update-codemaps
+---
+
 # 更新代码地图
 
 分析代码库结构并更新架构文档：
@@ -117,3 +123,14 @@ src/main/java/com/example/
 使用 Java Reflection API 或 ASM 字节码分析工具来扫描类结构。
 
 专注于高层结构，而非实现细节。
+
+## 相关工具
+
+- **ASM** - Java 字节码操作和分析框架
+- **JavaParser** - 解析 Java 源代码的库
+- **Javadoc** - 生成 API 文档的工具（跨平台：`javadoc` 命令）
+
+## 相关指令
+
+- `/learn` - 从分析结果提取可重用模式
+- `/skill-create` - 从 Git 历史生成技能文件

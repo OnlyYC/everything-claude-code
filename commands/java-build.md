@@ -1,5 +1,7 @@
 ---
-description: Fix Java compilation errors, build issues, and dependency problems incrementally. Invokes java-build-resolver agent for minimal, surgical fixes.
+name: java-build
+description: 增量修复 Java 编译错误、构建问题和依赖问题
+command: /java-build
 ---
 
 # Java 编译与修复
@@ -25,17 +27,17 @@ description: Fix Java compilation errors, build issues, and dependency problems 
 ## 执行的诊断命令
 
 ```bash
-# 主要编译检查
+# 主要编译检查（跨平台通用）
 mvn clean compile
 
-# 依赖分析
+# 依赖分析（跨平台通用）
 mvn dependency:tree
 mvn dependency:analyze
 
-# 跳过测试编译
+# 跳过测试编译（跨平台通用）
 mvn clean compile -DskipTests
 
-# 下载依赖
+# 下载依赖（跨平台通用）
 mvn dependency:resolve
 ```
 
@@ -100,22 +102,22 @@ Agent 会在以下情况停止并报告：
 ## Maven 常用命令
 
 ```bash
-# 清理并编译
+# 清理并编译（跨平台通用）
 mvn clean compile
 
-# 查看依赖树
+# 查看依赖树（跨平台通用）
 mvn dependency:tree
 
-# 分析未使用的依赖
+# 分析未使用的依赖（跨平台通用）
 mvn dependency:analyze
 
-# 强制更新快照
+# 强制更新快照（跨平台通用）
 mvn clean install -U
 
-# 跳过测试
+# 跳过测试（跨平台通用）
 mvn clean package -DskipTests
 
-# 查看有效 POM
+# 查看有效 POM（跨平台通用）
 mvn help:effective-pom
 ```
 
@@ -124,8 +126,9 @@ mvn help:effective-pom
 - `/tdd` - 编译成功后编写测试
 - `/code-review` - 审查代码质量
 - `/verify` - 执行完整验证循环
+- `/build-fix` - 通用构建修复指令
 
-## 相关
+## 相关文件
 
-- Agent：`agents/java-build-resolver.md`
-- 技能：`skills/java-patterns/`
+- Agent：`~/.claude/agents/java-build-resolver.md`
+- 技能：`~/.claude/skills/java-patterns/`

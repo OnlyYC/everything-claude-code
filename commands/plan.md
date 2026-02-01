@@ -1,5 +1,7 @@
 ---
-description: Restate requirements, assess risks, and create step-by-step implementation plan. WAIT for user CONFIRM before touching any code.
+name: plan
+description: 重述需求、评估风险并创建分步实现计划。在修改任何代码前等待用户确认
+command: /plan
 ---
 
 # Plan 指令
@@ -104,10 +106,10 @@ Agent（planner）：
 
 计划后：
 - 使用 `/tdd` 以测试驱动开发实现
-- 如果发生构建错误，使用 `/java-build`
+- 如果发生构建错误，使用 `/build-fix` 或 `/java-build`
 - 使用 `/code-review` 审查完成的实现
 
 ## 相关 Agent
 
 此指令呼叫位于以下位置的 `planner` Agent：
-`~/.claude/agents/planner.md`
+`~/.claude/agents/planner.md`（或 `~/.claude/agents/plan.md`）

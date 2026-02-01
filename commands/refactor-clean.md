@@ -1,11 +1,18 @@
+---
+name: refactor-clean
+description: 通过测试验证安全地识别和移除无用代码
+command: /refactor-clean
+---
+
 # 重构清理
 
 通过测试验证安全地识别和移除无用代码：
 
 1. 执行无用代码分析工具：
-   - **Deadclass**：找出未使用的类和方法
-   - **UCDetector**：Eclipse/Java 死代码检测
-   - **Coverage-based**：基于 JaCoCo 报告找出未覆盖代码
+   - **SpotBugs**：检测未使用的类、方法和字段
+   - **PMD**：代码质量检查，找出未使用的代码
+   - **JaCoCo**：基于覆盖率报告找出未覆盖代码
+   - **SonarQube**：全面的技术债务分析（可选）
 
 2. 在 `.reports/dead-code-analysis.md` 生成完整报告
 
@@ -28,14 +35,17 @@
 ## 无用代码检测工具
 
 ```bash
-# Maven 清理检查
+# Maven 清理检查（跨平台通用）
 mvn clean dependency:analyze
 
 # 查找未使用的依赖
 mvn dependency:analyze
 
-# UCDetector（需要额外配置）
-java -jar ucdetector.jar -p com.example:my-project
+# SpotBugs 死代码检测
+mvn spotbugs:check
+
+# PMD 代码质量检查
+mvn pmd:check
 
 # 基于覆盖率查找未使用代码
 mvn test jacoco:report
@@ -64,12 +74,19 @@ mvn test jacoco:report
 ## 自动清理
 
 ```bash
-# Java 自动格式化和优化
+# Java 自动格式化和优化（跨平台通用）
 mvn fmt:format
-
-# 使用 IDE 的自动优化功能
-# IntelliJ: Code -> Optimize Imports
-# Eclipse: Source -> Organize Imports
 ```
 
+### IDE 自动优化功能
+- **IntelliJ IDEA**: Code → Optimize Imports
+- **Eclipse**: Source → Organize Imports
+- **VS Code**: 右键 → Format Document / Organize Imports
+
 在执行测试前绝不删除代码！
+
+## 相关指令
+
+- `/test-coverage` - 分析测试覆盖率
+- `/code-review` - 审查代码质量
+- `/verify` - 执行完整验证循环

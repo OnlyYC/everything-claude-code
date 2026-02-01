@@ -1,26 +1,38 @@
 ---
 name: instinct-import
 description: 从团队成员、技能生成器或其他来源导入经验文件
-command: true
+command: /instinct-import [文件路径或URL] [--dry-run] [--force] [--merge-strategy <higher|local|import>]
 ---
 
 # 经验导入指令
 
-## 实现方式
+从团队成员、技能生成器或其他来源导入经验文件。
 
-使用插件根目录运行经验 CLI 工具：
+## 前置条件
 
-```bash
-python3 "${CLAUDE_PLUGIN_ROOT}/skills/continuous-learning-v2/scripts/instinct-cli.py" import <文件或URL> [--dry-run] [--force] [--min-confidence 0.7]
+需要安装 **continuous-learning-v2** 技能，确保以下 CLI 工具可用：
+
+**Windows (PowerShell):**
+```powershell
+# 检查工具是否安装
+python3 "$env:CLAUDE_PLUGIN_ROOT\skills\continuous-learning-v2\scripts\instinct-cli.py" --help
+
+# 或使用默认路径
+python3 ~/.claude/skills/continuous-learning-v2/scripts/instinct-cli.py --help
 ```
 
-如果 `CLAUDE_PLUGIN_ROOT` 未设置（手动安装）：
-
+**macOS/Linux:**
 ```bash
-python3 ~/.claude/skills/continuous-learning-v2/scripts/instinct-cli.py import <文件或URL>
+# 检查工具是否安装
+python3 "${CLAUDE_PLUGIN_ROOT}/skills/continuous-learning-v2/scripts/instinct-cli.py" --help
+
+# 或使用默认路径
+python3 ~/.claude/skills/continuous-learning-v2/scripts/instinct-cli.py --help
 ```
 
-可从以下来源导入经验：
+如果未安装，请先安装 continuous-learning-v2 技能。
+
+## 可导入来源
 - 团队成员导出的经验文件
 - 技能生成器（仓库分析）
 - 社区经验合集
@@ -104,7 +116,7 @@ python3 ~/.claude/skills/continuous-learning-v2/scripts/instinct-cli.py import <
 ```yaml
 source: "inherited"
 imported_from: "team-instincts.yaml"
-imported_at: "2025-01-22T10:30:00Z"
+imported_at: "2025-01-22T10:30:00Z"  # 使用实际导入时间戳
 original_source: "session-observation"  # 或 "repo-analysis"
 ```
 
@@ -123,7 +135,7 @@ original_source: "session-observation"  # 或 "repo-analysis"
 
 ## Java 技术栈经验示例
 
-导入 Spring Boot + MyBatis-Plus 项目经验时：
+导入 Spring Boot + MyBatis-Plus 项目经验时（日期示例）：
 
 ```
 ## 新增经验（5 条）

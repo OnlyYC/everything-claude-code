@@ -1,5 +1,7 @@
 ---
-description: Comprehensive Java code review for Spring Boot patterns, concurrency safety, error handling, and security. Invokes java-reviewer agent.
+name: java-review
+description: 全面的 Java 代码审查（Spring Boot 模式、并发安全、错误处理、安全性）
+command: /java-review
 ---
 
 # Java 代码审查
@@ -94,15 +96,15 @@ description: Comprehensive Java code review for Spring Boot patterns, concurrenc
 ## 执行的自动化检查
 
 ```bash
-# 编译检查
+# 编译检查（跨平台通用）
 mvn clean compile
 
-# 静态分析
+# 静态分析（跨平台通用）
 mvn checkstyle:check
 mvn spotbugs:check
 mvn pmd:check
 
-# 依赖安全扫描
+# 依赖安全扫描（跨平台通用）
 mvn dependency-check:check
 ```
 
@@ -134,11 +136,12 @@ mvn dependency-check:check
 ## 相关指令
 
 - 先使用 `/tdd` 确保测试通过
-- 如果发生构建错误，使用 `/java-build`
+- 如果发生构建错误，使用 `/java-build` 或 `/build-fix`
 - 提交前使用 `/java-review`
 - 对通用问题使用 `/code-review`
 
-## 相关
+## 相关文件
 
-- Agent：`agents/java-reviewer.md`
-- 技能：`skills/java-patterns/`、`skills/spring-boot-patterns/`
+- Agent：`~/.claude/agents/java-reviewer.md`
+- 技能：`~/.claude/skills/java-patterns/`
+- 技能：`~/.claude/skills/spring-boot-patterns/`

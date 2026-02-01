@@ -1,3 +1,9 @@
+---
+name: test-coverage
+description: 分析测试覆盖率并生成缺失的测试
+command: /test-coverage
+---
+
 # 测试覆盖率
 
 分析测试覆盖率并生成缺失的测试：
@@ -22,6 +28,22 @@
 
 ## 覆盖率工具
 
+**Windows (PowerShell):**
+```powershell
+# Maven 命令
+mvn test jacoco:report
+
+# 查看 HTML 报告
+start target/site/jacoco/index.html
+
+# 按方法查看覆盖率
+mvn test jacoco:report; Get-Content target/site/jacoco/jacoco.csv
+
+# 检查覆盖率是否达标
+mvn verify jacoco:check
+```
+
+**macOS/Linux:**
 ```bash
 # Maven 命令
 mvn test jacoco:report
@@ -146,3 +168,10 @@ public class WebConfig implements WebMvcConfigurer {
 - 异常处理流程
 - 边界情况（null、空集合、边界值）
 - 并发场景
+
+## 相关指令
+
+- `/tdd` - 测试驱动开发
+- `/java-test` - Java 单元测试指令
+- `/e2e` - 集成测试指令
+- `/verify` - 执行完整验证循环

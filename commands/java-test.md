@@ -1,5 +1,7 @@
 ---
-description: Enforce TDD workflow for Java. Write JUnit 5 tests first, then implement. Verify 80%+ coverage with JaCoCo.
+name: java-test
+description: 强制执行 Java TDD 工作流。先编写 JUnit 5 测试，再实现。确保 80%+ 覆盖率
+command: /java-test
 ---
 
 # Java 单元测试指令
@@ -125,6 +127,22 @@ class UserServiceTest {
 
 ## 基准测试
 
+**Windows (PowerShell):**
+```powershell
+# 覆盖率检查
+mvn test jacoco:report
+
+# 覆盖率 Profile
+mvn test jacoco:report -Djacoco.destFile=target/jacoco.exec
+
+# 按方法显示覆盖率
+mvn test jacoco:report; Get-Content target/site/jacoco/jacoco.csv
+
+# 带覆盖率执行特定测试
+mvn test -Dtest=UserServiceTest jacoco:report
+```
+
+**macOS/Linux:**
 ```bash
 # 覆盖率检查
 mvn test jacoco:report
@@ -204,8 +222,10 @@ mvn verify
 - `/java-build` - 修复构建错误
 - `/java-review` - 审查实现后的代码
 - `/verify` - 执行完整验证循环
+- `/build-fix` - 增量修复编译错误
 
-## 相关
+## 相关文件
 
-- 技能：`skills/java-testing/`
-- 技能：`skills/tdd-workflow/`
+- Agent：`~/.claude/agents/java-tdd-guide.md`
+- 技能：`~/.claude/skills/java-testing/`
+- 技能：`~/.claude/skills/tdd-workflow/`

@@ -1,3 +1,9 @@
+---
+name: verify
+description: 对当前代码库状态执行全面验证
+command: /verify [quick|full|pre-commit|pre-pr|ci]
+---
+
 # 验证指令
 
 对当前代码库状态执行全面验证。
@@ -64,23 +70,24 @@
 
 ## 参数
 
-$ARGUMENTS 可以是：
-- `quick` - 只检查编译 + 单元测试
-- `full` - 所有检查（默认）
-- `pre-commit` - 与提交相关的检查
-- `pre-pr` - 完整检查加上安全扫描
-- `ci` - CI 环境完整检查（包含依赖扫描）
+| 参数 | 说明 |
+|------|------|
+| `quick` | 只检查编译 + 单元测试 |
+| `full` | 所有检查（默认） |
+| `pre-commit` | 与提交相关的检查 |
+| `pre-pr` | 完整检查加上安全扫描 |
+| `ci` | CI 环境完整检查（包含依赖扫描） |
 
 ## Maven 完整验证命令
 
 ```bash
-# 快速验证（本地开发）
+# 快速验证（本地开发）- 跨平台通用
 mvn clean compile test
 
-# 完整验证（提交前）
+# 完整验证（提交前）- 跨平台通用
 mvn clean verify checkstyle:check spotbugs:check
 
-# CI 完整验证
+# CI 完整验证 - 跨平台通用
 mvn clean verify dependency-check:check
 ```
 

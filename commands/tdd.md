@@ -1,5 +1,7 @@
 ---
-description: Enforce test-driven development workflow. Generate JUnit 5 tests FIRST, then implement minimal code to pass. Ensure 80%+ coverage with JaCoCo.
+name: tdd
+description: 强制执行测试驱动开发工作流。先生成 JUnit 5 测试，再实现最小代码。确保 80%+ 覆盖率
+command: /tdd
 ---
 
 # TDD 指令
@@ -163,6 +165,25 @@ void createUser_UsernameExists() {
 
 ## 测试命令
 
+**Windows (PowerShell):**
+```powershell
+# 执行所有测试
+mvn test
+
+# 执行特定测试类
+mvn test -Dtest=UserServiceTest
+
+# 执行特定测试方法
+mvn test -Dtest=UserServiceTest#getUserById_Exists
+
+# 生成覆盖率报告
+mvn test jacoco:report
+
+# 查看覆盖率
+mvn test jacoco:report; start target/site/jacoco/index.html
+```
+
+**macOS/Linux:**
 ```bash
 # 执行所有测试
 mvn test
@@ -226,13 +247,13 @@ mvn test jacoco:report && open target/site/jacoco/index.html
 
 - 先使用 `/plan` 理解要构建什么
 - 使用 `/tdd` 带着测试实现
-- 如果发生构建错误，使用 `/build-fix`
+- 如果发生构建错误，使用 `/build-fix` 或 `/java-build`
 - 使用 `/code-review` 审查实现
 - 使用 `/test-coverage` 验证覆盖率
 
 ## 相关 Agent
 
-此指令调用位于以下位置的 `java-tdd-guide` Agent：
+此指令调用位于以下位置的 **java-tdd-guide** Agent：
 `~/.claude/agents/java-tdd-guide.md`
 
 并可参考位于以下位置的 `java-tdd-workflow` 技能：

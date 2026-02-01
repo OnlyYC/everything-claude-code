@@ -1,3 +1,9 @@
+---
+name: code-review
+description: 对未提交变更进行全面的安全性和质量审查
+command: /code-review
+---
+
 # 代码审查
 
 对未提交变更进行全面的安全性和质量审查：
@@ -57,20 +63,26 @@
 ## 静态分析工具
 
 ```bash
-# Maven 编译检查
+# Maven 编译检查（跨平台通用）
 mvn clean compile
 
-# Checkstyle 代码风格检查
+# Checkstyle 代码风格检查（跨平台通用）
 mvn checkstyle:check
 
-# SpotBugs 缺陷检测
+# SpotBugs 缺陷检测（跨平台通用）
 mvn spotbugs:check
 
-# PMD 代码质量检查
+# PMD 代码质量检查（跨平台通用）
 mvn pmd:check
 
-# OWASP Dependency Check 依赖漏洞扫描
+# OWASP Dependency Check 依赖漏洞扫描（跨平台通用）
 mvn dependency-check:check
 ```
 
 绝不批准有安全漏洞的代码！
+
+## 相关指令
+
+- `/java-review` - Java 特定代码审查
+- `/verify` - 执行完整验证循环
+- `/build-fix` - 修复发现的问题

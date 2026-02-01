@@ -22,12 +22,25 @@ allowed_tools: ["Bash", "Read", "Write", "Grep", "Glob"]
 1. **解析 Git 历史** - 分析提交记录、文件变更和代码模式
 2. **识别规范模式** - 识别重复的工作流和编码约定
 3. **生成 SKILL.md** - 创建符合 Claude Code 规范的技能文件
-4. **可选生成经验文件** - 用于 continuous-learning-v2 系统
+4. **可选生成经验文件** - 用于 continuous-learning-v2 系统（需安装该技能）
+
+**前置条件**: 需要安装 **continuous-learning-v2** 技能才能生成经验文件。
 
 ## 分析步骤
 
 ### 第一步：收集 Git 数据
 
+**Windows (PowerShell):**
+```powershell
+# 获取最近的提交及文件变更
+$COMMITS = if ($env:COMMITS) { $env:COMMITS } else { 200 }
+git log --oneline -n $COMMITS --name-only --pretty=format:"%H|%s|%ad" --date=short
+
+# 按文件统计提交频率
+git log --oneline -n 200 --name-only | Select-String -NotMatch "^$" | Select-String -NotMatch "^[a-f0-9]" | Group-Object | Sort-Object Count -Descending | Select-Object -First 20
+```
+
+**macOS/Linux:**
 ```bash
 # 获取最近的提交及文件变更
 git log --oneline -n ${COMMITS:-200} --name-only --pretty=format:"%H|%s|%ad" --date=short
